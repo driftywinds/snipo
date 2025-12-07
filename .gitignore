@@ -1,3 +1,6 @@
 ## ignore everything md except README.md
 *.md
 !README.md
+
+## database (used for testing during development)
+/data
