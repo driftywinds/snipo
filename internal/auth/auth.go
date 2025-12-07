@@ -64,6 +64,14 @@ func (s *Service) VerifyPassword(password string) bool {
 	return subtle.ConstantTimeCompare([]byte(password), []byte(s.masterPassword)) == 1
 }
 
+// UpdatePassword updates the master password (in-memory only, resets on restart)
+// For persistent password storage, this would need to be stored in the database
+func (s *Service) UpdatePassword(newPassword string) error {
+	s.masterPassword = newPassword
+	s.logger.Info("master password updated")
+	return nil
+}
+
 // CreateSession creates a new session and returns the session token
 func (s *Service) CreateSession() (string, error) {
 	// Generate random token

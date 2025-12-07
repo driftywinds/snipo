@@ -87,3 +87,45 @@ func (h *AuthHandler) Check(w http.ResponseWriter, r *http.Request) {
 
 	OK(w, map[string]bool{"authenticated": true})
 }
+
+// ChangePasswordRequest represents a password change request
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
+// ChangePassword handles POST /api/v1/auth/change-password
+func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	var req ChangePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		Error(w, http.StatusBadRequest, "INVALID_JSON", "Invalid JSON payload")
+		return
+	}
+
+	if req.CurrentPassword == "" || req.NewPassword == "" {
+		Error(w, http.StatusBadRequest, "MISSING_FIELDS", "Current and new password are required")
+		return
+	}
+
+	if len(req.NewPassword) < 6 {
+		Error(w, http.StatusBadRequest, "PASSWORD_TOO_SHORT", "Password must be at least 6 characters")
+		return
+	}
+
+	// Verify current password
+	if !h.authService.VerifyPassword(req.CurrentPassword) {
+		Error(w, http.StatusUnauthorized, "INVALID_PASSWORD", "Current password is incorrect")
+		return
+	}
+
+	// Update password
+	if err := h.authService.UpdatePassword(req.NewPassword); err != nil {
+		InternalError(w)
+		return
+	}
+
+	OK(w, map[string]interface{}{
+		"success": true,
+		"message": "Password changed successfully",
+	})
+}

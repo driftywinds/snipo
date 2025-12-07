@@ -112,8 +112,26 @@
                 >
             </div>
             
-            <!-- Actions -->
+            <!-- Left actions (New snippet) -->
             <div class="header-actions">
+                <button class="btn-icon btn-primary" @click="newSnippet()" title="New Snippet (Ctrl+N)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Right actions (Settings, Theme toggle) -->
+            <div class="header-actions-right">
+                <!-- Settings -->
+                <button class="btn-icon" @click="openSettings()" title="Settings">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                </button>
+                
                 <!-- Theme toggle -->
                 <button class="btn-icon" @click="$store.app.toggleTheme()" title="Toggle theme">
                     <!-- Sun icon (shown in dark mode) -->
@@ -131,13 +149,6 @@
                     <!-- Moon icon (shown in light mode) -->
                     <svg x-show="!$store.app.darkMode" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                    </svg>
-                </button>
-                
-                <button class="btn-icon btn-primary" @click="newSnippet()" title="New Snippet (Ctrl+N)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
                 </button>
             </div>
@@ -402,6 +413,135 @@
                 <button class="btn-primary" style="background: var(--snipo-danger); border-color: var(--snipo-danger);" @click="deleteSnippet()">
                     Delete
                 </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Settings modal -->
+    <div class="modal-backdrop" x-show="showSettings" x-cloak @click.self="closeSettings()">
+        <div class="modal settings-modal">
+            <div class="modal-header">
+                <h3>Settings</h3>
+                <button class="btn-icon" @click="closeSettings()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Settings tabs -->
+            <div class="settings-tabs">
+                <button class="settings-tab" :class="{ active: settingsTab === 'password' }" @click="settingsTab = 'password'">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    Password
+                </button>
+                <button class="settings-tab" :class="{ active: settingsTab === 'apikeys' }" @click="settingsTab = 'apikeys'">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+                    </svg>
+                    API Keys
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Password tab -->
+                <div x-show="settingsTab === 'password'">
+                    <form @submit.prevent="changePassword()">
+                        <div class="editor-field">
+                            <label>Current Password</label>
+                            <input type="password" x-model="passwordForm.current" required>
+                        </div>
+                        <div class="editor-field">
+                            <label>New Password</label>
+                            <input type="password" x-model="passwordForm.new" required minlength="6">
+                        </div>
+                        <div class="editor-field">
+                            <label>Confirm New Password</label>
+                            <input type="password" x-model="passwordForm.confirm" required>
+                        </div>
+                        
+                        <p x-show="passwordError" class="text-sm" style="color: var(--snipo-danger);" x-text="passwordError"></p>
+                        <p x-show="passwordSuccess" class="text-sm" style="color: var(--snipo-success);" x-text="passwordSuccess"></p>
+                        
+                        <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1rem;">
+                            Change Password
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- API Keys tab -->
+                <div x-show="settingsTab === 'apikeys'">
+                    <!-- Create new token -->
+                    <div class="api-token-form">
+                        <h4 style="margin-bottom: 1rem;">Create New API Token</h4>
+                        
+                        <!-- Show created token -->
+                        <div x-show="createdToken" class="created-token-box">
+                            <p class="text-sm" style="margin-bottom: 0.5rem;"><strong>Token created!</strong> Copy it now - it won't be shown again.</p>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="text" :value="createdToken" readonly style="font-family: var(--font-mono); font-size: 0.8rem;">
+                                <button class="btn-primary" @click="copyToken()" style="white-space: nowrap;">Copy</button>
+                            </div>
+                        </div>
+                        
+                        <div x-show="!createdToken">
+                            <div class="editor-field">
+                                <label>Token Name</label>
+                                <input type="text" x-model="newToken.name" placeholder="e.g., CLI Access">
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="editor-field">
+                                    <label>Permissions</label>
+                                    <select x-model="newToken.permissions">
+                                        <option value="read">Read Only</option>
+                                        <option value="write">Read & Write</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                </div>
+                                <div class="editor-field">
+                                    <label>Expires In (days)</label>
+                                    <input type="number" x-model="newToken.expires_in_days" min="1" max="365" placeholder="30">
+                                </div>
+                            </div>
+                            <button class="btn-primary" @click="createApiToken()" style="width: 100%;">
+                                Create Token
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Existing tokens -->
+                    <div class="api-tokens-list" style="margin-top: 1.5rem;">
+                        <h4 style="margin-bottom: 1rem;">Existing Tokens</h4>
+                        
+                        <div x-show="apiTokens.length === 0" class="text-sm text-muted">
+                            No API tokens yet.
+                        </div>
+                        
+                        <template x-for="token in apiTokens" :key="token.id">
+                            <div class="api-token-item">
+                                <div class="api-token-info">
+                                    <div class="api-token-name" x-text="token.name"></div>
+                                    <div class="api-token-meta">
+                                        <span class="api-token-permission" x-text="token.permissions"></span>
+                                        <span>Created: <span x-text="formatTokenDate(token.created_at)"></span></span>
+                                        <span x-show="token.expires_at">Expires: <span x-text="formatTokenDate(token.expires_at)"></span></span>
+                                        <span x-show="token.last_used_at">Last used: <span x-text="formatTokenDate(token.last_used_at)"></span></span>
+                                    </div>
+                                </div>
+                                <button class="btn-icon danger" @click="deleteApiToken(token.id)" title="Delete token">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

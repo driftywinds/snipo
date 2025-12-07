@@ -81,6 +81,9 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.RequireAuthWithTokenRepo(cfg.AuthService, tokenRepo))
 
+		// Auth management (protected)
+		r.Post("/api/v1/auth/change-password", authHandler.ChangePassword)
+
 		// Snippet CRUD
 		r.Route("/api/v1/snippets", func(r chi.Router) {
 			r.Get("/", snippetHandler.List)

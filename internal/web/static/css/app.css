@@ -11,6 +11,15 @@
   
   /* Sidebar */
   --sidebar-width: 260px;
+  
+  /* Fonts */
+  --font-sans: 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Fira Code', 'Monaco', 'Consolas', monospace;
+}
+
+/* Apply Noto Sans to body */
+body {
+  font-family: var(--font-sans);
 }
 
 /* Light mode */
@@ -28,6 +37,13 @@
   --editor-line-numbers: #94a3b8;
   
   --card-preview-bg: #f1f5f9;
+  
+  /* Icon colors for light mode */
+  --icon-color: #475569;
+  --icon-hover: #1e293b;
+  --icon-active: var(--snipo-primary);
+  --icon-favorite: #eab308;
+  --icon-danger: #dc2626;
 }
 
 /* Dark mode */
@@ -45,6 +61,13 @@
   --editor-line-numbers: #475569;
   
   --card-preview-bg: #0f172a;
+  
+  /* Icon colors for dark mode */
+  --icon-color: #94a3b8;
+  --icon-hover: #e2e8f0;
+  --icon-active: var(--snipo-primary);
+  --icon-favorite: #facc15;
+  --icon-danger: #ef4444;
 }
 
 /* Layout */
@@ -214,6 +237,13 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.header-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
 }
 
 /* Snippet list */
@@ -426,16 +456,26 @@
   background: transparent;
   border: 1px solid var(--pico-muted-border-color);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, color 0.15s;
+  color: var(--icon-color);
 }
 
 .btn-icon:hover {
   background: var(--pico-muted-border-color);
+  color: var(--icon-hover);
 }
 
 .btn-icon svg {
   width: 18px;
   height: 18px;
+}
+
+.btn-icon.favorite svg {
+  color: var(--icon-favorite);
+}
+
+.btn-icon.danger:hover {
+  color: var(--icon-danger);
 }
 
 .btn-primary {
@@ -566,6 +606,97 @@
 @keyframes slideIn {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
+}
+
+/* Settings modal */
+.settings-modal {
+  max-width: 600px;
+  width: 90%;
+}
+
+.settings-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--pico-muted-border-color);
+  padding: 0 1rem;
+}
+
+.settings-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  color: var(--icon-color);
+  font-size: 0.9rem;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.settings-tab:hover {
+  color: var(--icon-hover);
+}
+
+.settings-tab.active {
+  color: var(--snipo-primary);
+  border-bottom-color: var(--snipo-primary);
+}
+
+.settings-tab svg {
+  width: 16px;
+  height: 16px;
+}
+
+.created-token-box {
+  background: var(--snipo-success);
+  color: white;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.created-token-box input {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  color: white;
+}
+
+.api-token-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: var(--pico-card-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 0.375rem;
+  margin-bottom: 0.5rem;
+}
+
+.api-token-info {
+  flex: 1;
+}
+
+.api-token-name {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.api-token-meta {
+  font-size: 0.75rem;
+  color: var(--pico-muted-color);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.api-token-permission {
+  background: var(--snipo-primary);
+  color: white;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
 }
 
 /* Mobile responsive */
