@@ -8,3 +8,7 @@
 /data
 cookies.txt
 bin/*
+
+## Coverage
+coverage.out
+coverage.html
