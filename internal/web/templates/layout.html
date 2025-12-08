@@ -90,10 +90,10 @@
     <script src="/static/vendor/js/prism-sql.min.js"></script>
     <script src="/static/vendor/js/prism-markdown.min.js"></script>
     
-    <!-- App JS (must load before Alpine) -->
-    <script src="/static/js/app.js"></script>
+    <!-- App JS (must load before Alpine, defer ensures execution order) -->
+    <script defer src="/static/js/app.js"></script>
     
-    <!-- Alpine.js with collapse plugin (load last, defer ensures DOM is ready) -->
+    <!-- Alpine.js with collapse plugin (load last after app.js) -->
     <script defer src="/static/vendor/js/alpine-collapse.min.js"></script>
     <script defer src="/static/vendor/js/alpine.min.js"></script>
 </body>
