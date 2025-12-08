@@ -13,12 +13,14 @@ Snipo is designed as a **local-first, self-hosted** application. The security mo
 ## Current Security Features
 
 ### Authentication
-- **Master password** authentication with constant-time comparison
+- **Master password** hashed at startup with Argon2id (OWASP recommended parameters)
+- **Progressive login delays** - exponential backoff after failed attempts (1s, 2s, 4s, 8s, 16s, 30s max)
 - **Session tokens** hashed with SHA256 before database storage
 - **Secure cookies**: `HttpOnly`, `Secure`, `SameSite=Strict`
 - **Session expiration** with automatic cleanup
 - **API tokens** with SHA256 hashing and optional expiration
 - **Rate limiting** on authentication endpoints (configurable)
+- **Session secret warning** - logs warning if `SNIPO_SESSION_SECRET` not explicitly set
 
 ### HTTP Security Headers
 - `Content-Security-Policy` - Restricts resource loading to same-origin

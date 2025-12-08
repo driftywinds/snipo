@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/MohamedElashri/snipo/internal/auth"
 )
@@ -40,7 +42,19 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.authService.VerifyPassword(req.Password) {
+	// Get client IP for rate limiting
+	clientIP := getClientIPForAuth(r)
+
+	// Verify password with progressive delay enforcement
+	valid, delay := h.authService.VerifyPasswordWithDelay(req.Password, clientIP)
+	if delay > 0 {
+		w.Header().Set("Retry-After", fmt.Sprintf("%d", int(delay.Seconds())+1))
+		Error(w, http.StatusTooManyRequests, "RATE_LIMITED",
+			fmt.Sprintf("Too many failed attempts. Please wait %d seconds.", int(delay.Seconds())+1))
+		return
+	}
+
+	if !valid {
 		Error(w, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Invalid password")
 		return
 	}
@@ -59,6 +73,29 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Success: true,
 		Message: "Login successful",
 	})
+}
+
+// getClientIPForAuth extracts client IP for authentication rate limiting
+func getClientIPForAuth(r *http.Request) string {
+	// Check X-Forwarded-For header (if behind proxy)
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		ips := strings.Split(xff, ",")
+		if len(ips) > 0 {
+			return strings.TrimSpace(ips[0])
+		}
+	}
+
+	// Check X-Real-IP header
+	if xri := r.Header.Get("X-Real-IP"); xri != "" {
+		return xri
+	}
+
+	// Fall back to RemoteAddr
+	ip := r.RemoteAddr
+	if idx := strings.LastIndex(ip, ":"); idx != -1 {
+		ip = ip[:idx]
+	}
+	return ip
 }
 
 // Logout handles POST /api/v1/auth/logout
