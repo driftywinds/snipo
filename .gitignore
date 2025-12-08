@@ -1,6 +1,7 @@
 ## ignore everything md except README.md
 *.md
 !README.md
+!docs/*
 
 ## data/binaries (used for testing during development)
 /data
