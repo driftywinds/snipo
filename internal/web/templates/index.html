@@ -189,8 +189,30 @@
                 </button>
             </div>
             
-            <!-- Right actions (Settings, Theme toggle) -->
+            <!-- Right actions (View toggle, Settings, Theme toggle) -->
             <div class="header-actions-right">
+                <!-- View toggle -->
+                <div class="view-toggle">
+                    <button class="btn-icon" :class="{ 'active': viewMode === 'grid' }" @click="setViewMode('grid')" title="Grid View">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="14" width="7" height="7"></rect>
+                            <rect x="3" y="14" width="7" height="7"></rect>
+                        </svg>
+                    </button>
+                    <button class="btn-icon" :class="{ 'active': viewMode === 'list' }" @click="setViewMode('list')" title="List View">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="8" y1="6" x2="21" y2="6"></line>
+                            <line x1="8" y1="12" x2="21" y2="12"></line>
+                            <line x1="8" y1="18" x2="21" y2="18"></line>
+                            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                
                 <!-- Settings -->
                 <button class="btn-icon" @click="openSettings()" title="Settings">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -271,8 +293,8 @@
                 </button>
             </div>
             
-            <!-- Snippet grid -->
-            <div class="snippet-grid" x-show="!loading && snippets.length > 0">
+            <!-- Snippet grid/list -->
+            <div :class="viewMode === 'list' ? 'snippet-list-view' : 'snippet-grid'" x-show="!loading && snippets.length > 0">
                 <template x-for="snippet in snippets" :key="snippet.id">
                     <article class="snippet-card" @click="viewSnippet(snippet)">
                         <div class="snippet-card-header">
@@ -282,7 +304,9 @@
                                   x-text="snippet.language"></span>
                         </div>
                         
-                        <pre class="snippet-card-preview"><code :class="'language-' + snippet.language" x-text="snippet.content.substring(0, 200)"></code></pre>
+                        <!-- Show description if exists, otherwise show first 2 lines of code -->
+                        <p class="snippet-card-description" x-show="snippet.description" x-text="snippet.description"></p>
+                        <pre class="snippet-card-preview" x-show="!snippet.description"><code x-text="snippet.content.split('\n').slice(0, 2).join('\n')"></code></pre>
                         
                         <div class="snippet-card-footer">
                             <div class="snippet-card-tags">

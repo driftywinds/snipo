@@ -128,6 +128,7 @@ document.addEventListener('alpine:init', () => {
     totalSnippets: 0, // Total count for "All Snippets" (unfiltered)
     favoritesCount: 0, // Count of favorite snippets
     loading: true,
+    viewMode: localStorage.getItem('snipo-view-mode') || 'grid', // 'grid' or 'list'
     showEditor: false,
     isEditing: false, // false = preview mode, true = edit mode
     showDeleteModal: false,
@@ -252,6 +253,11 @@ document.addEventListener('alpine:init', () => {
       if (typeof Prism !== 'undefined') {
         Prism.highlightAll();
       }
+    },
+    
+    setViewMode(mode) {
+      this.viewMode = mode;
+      localStorage.setItem('snipo-view-mode', mode);
     },
     
     async loadSnippets() {
