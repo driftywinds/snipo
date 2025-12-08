@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/MohamedElashri/snipo/internal/api"
+	"github.com/MohamedElashri/snipo/internal/api/middleware"
 	"github.com/MohamedElashri/snipo/internal/auth"
 	"github.com/MohamedElashri/snipo/internal/config"
 	"github.com/MohamedElashri/snipo/internal/database"
@@ -53,6 +54,10 @@ func runServer() {
 
 	// Load configuration
 	cfg, err := config.Load()
+	if err == nil {
+		// Configure proxy trust setting
+		middleware.TrustProxy = cfg.Server.TrustProxy
+	}
 	if err != nil {
 		logger.Error("failed to load configuration", "error", err)
 		os.Exit(1)

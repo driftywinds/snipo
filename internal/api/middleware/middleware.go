@@ -238,22 +238,32 @@ func (rl *RateLimiter) cleanup() {
 	}
 }
 
+// TrustProxy controls whether to trust X-Forwarded-For headers
+// Set to true only when behind a trusted reverse proxy
+var TrustProxy = false
+
 // getClientIP extracts the client IP from the request
+// WARNING: X-Forwarded-For can be spoofed if not behind a trusted proxy
 func getClientIP(r *http.Request) string {
-	// Check X-Forwarded-For header
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		ips := strings.Split(xff, ",")
-		if len(ips) > 0 {
-			return strings.TrimSpace(ips[0])
+	// Only trust proxy headers if explicitly configured
+	if TrustProxy {
+		// Check X-Forwarded-For header (take rightmost untrusted IP for security)
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			ips := strings.Split(xff, ",")
+			if len(ips) > 0 {
+				// Use the first IP (client IP) - in production, consider using
+				// the rightmost IP not in your trusted proxy list
+				return strings.TrimSpace(ips[0])
+			}
+		}
+
+		// Check X-Real-IP header
+		if xri := r.Header.Get("X-Real-IP"); xri != "" {
+			return xri
 		}
 	}
 
-	// Check X-Real-IP header
-	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return xri
-	}
-
-	// Fall back to RemoteAddr
+	// Fall back to RemoteAddr (direct connection IP)
 	ip := r.RemoteAddr
 	if idx := strings.LastIndex(ip, ":"); idx != -1 {
 		ip = ip[:idx]
@@ -262,9 +272,25 @@ func getClientIP(r *http.Request) string {
 }
 
 // CORS adds CORS headers for API requests
+// For local-first deployment, CORS is restrictive by default.
+// Only same-origin requests are allowed unless explicitly configured.
 func CORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := r.Header.Get("Origin")
+
+		// For local deployment, only allow same-origin or no origin (same-site requests)
+		// If you need cross-origin access, configure allowed origins explicitly
+		if origin != "" {
+			// Check if origin matches the request host (same-origin)
+			// For local deployment, this is typically localhost or the server's address
+			requestHost := r.Host
+			if origin == "http://"+requestHost || origin == "https://"+requestHost {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+				w.Header().Set("Access-Control-Allow-Credentials", "true")
+			}
+			// Otherwise, don't set CORS headers (browser will block cross-origin requests)
+		}
+
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key")
 		w.Header().Set("Access-Control-Max-Age", "86400")

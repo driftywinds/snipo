@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/MohamedElashri/snipo/internal/auth"
@@ -31,7 +30,7 @@ type LoginResponse struct {
 // Login handles POST /api/v1/auth/login
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := DecodeJSON(r, &req); err != nil {
 		Error(w, http.StatusBadRequest, "INVALID_JSON", "Invalid JSON payload")
 		return
 	}
@@ -97,7 +96,7 @@ type ChangePasswordRequest struct {
 // ChangePassword handles POST /api/v1/auth/change-password
 func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	var req ChangePasswordRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := DecodeJSON(r, &req); err != nil {
 		Error(w, http.StatusBadRequest, "INVALID_JSON", "Invalid JSON payload")
 		return
 	}
@@ -107,8 +106,8 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(req.NewPassword) < 6 {
-		Error(w, http.StatusBadRequest, "PASSWORD_TOO_SHORT", "Password must be at least 6 characters")
+	if len(req.NewPassword) < 12 {
+		Error(w, http.StatusBadRequest, "PASSWORD_TOO_SHORT", "Password must be at least 12 characters")
 		return
 	}
 
