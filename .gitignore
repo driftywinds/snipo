@@ -2,5 +2,7 @@
 *.md
 !README.md
 
-## database (used for testing during development)
+## data/binaries (used for testing during development)
 /data
+cookies.txt
+bin/snipo
