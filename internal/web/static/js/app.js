@@ -115,8 +115,10 @@ document.addEventListener('alpine:init', () => {
       tags: [],
       folder_id: null,
       is_public: false,
-      is_favorite: false
+      is_favorite: false,
+      files: [] // Multi-file support
     },
+    activeFileIndex: 0, // Currently active file tab
     filter: {
       query: '',
       tagId: null,
@@ -149,9 +151,10 @@ document.addEventListener('alpine:init', () => {
     showTagModal: false,
     editingFolder: { name: '', parent_id: '' },
     editingTag: { id: null, name: '' },
-    // Draft auto-save (supports up to 3 drafts)
-    drafts: [], // Array of { id, snippet, savedAt }
-    showDraftList: false,
+    // Draft auto-save (single draft only)
+    hasDraft: false,
+    draftSnippet: null,
+    draftSavedAt: null,
     autoSaveTimeout: null,
     
     async init() {
@@ -343,11 +346,27 @@ document.addEventListener('alpine:init', () => {
         tags: [],
         folder_id: null,
         is_public: false,
-        is_favorite: false
+        is_favorite: false,
+        files: [{
+          id: 0,
+          filename: 'main.js',
+          content: '',
+          language: 'javascript'
+        }]
       };
+      this.activeFileIndex = 0;
       this.showEditor = true;
       this.isEditing = true;
       this.updateUrl({ edit: true });
+      
+      // Focus filename input after render
+      this.$nextTick(() => {
+        const input = document.querySelector('.filename-input');
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      });
     },
     
     async viewSnippet(snippet) {
@@ -356,8 +375,10 @@ document.addEventListener('alpine:init', () => {
         this.editingSnippet = {
           ...result,
           tags: (result.tags || []).map(t => t.name),
-          folder_id: result.folders?.[0]?.id || null
+          folder_id: result.folders?.[0]?.id || null,
+          files: result.files || []
         };
+        this.activeFileIndex = 0;
         this.showEditor = true;
         this.isEditing = false;
         this.updateUrl({ snippet: snippet.id });
@@ -379,12 +400,13 @@ document.addEventListener('alpine:init', () => {
         this.editingSnippet = {
           ...result,
           tags: (result.tags || []).map(t => t.name),
-          folder_id: result.folders?.[0]?.id || null
+          folder_id: result.folders?.[0]?.id || null,
+          files: result.files || []
         };
+        this.activeFileIndex = 0;
         this.showEditor = true;
         this.isEditing = true;
         this.updateUrl({ snippet: snippet.id, edit: true });
-        // Trigger syntax highlighting after editor opens
         this.$nextTick(() => this.highlightAll());
       }
     },
@@ -398,14 +420,30 @@ document.addEventListener('alpine:init', () => {
         folderId = parseInt(folderId, 10) || null;
       }
       
+      // Prepare files array if multi-file
+      let files = null;
+      if (this.editingSnippet.files && this.editingSnippet.files.length > 0) {
+        files = this.editingSnippet.files.map(f => ({
+          id: f.id || 0,
+          filename: f.filename,
+          content: f.content,
+          language: f.language
+        }));
+      }
+      
+      // For multi-file snippets, use first file's content/language as primary
+      const primaryContent = files && files.length > 0 ? files[0].content : this.editingSnippet.content;
+      const primaryLanguage = files && files.length > 0 ? files[0].language : this.editingSnippet.language;
+      
       const data = {
         title: this.editingSnippet.title,
         description: this.editingSnippet.description || '',
-        content: this.editingSnippet.content,
-        language: this.editingSnippet.language,
+        content: primaryContent,
+        language: primaryLanguage,
         tags: this.editingSnippet.tags || [],
         folder_id: folderId,
-        is_public: this.editingSnippet.is_public || false
+        is_public: this.editingSnippet.is_public || false,
+        files: files
       };
       
       let result;
@@ -455,132 +493,91 @@ document.addEventListener('alpine:init', () => {
         tags: [],
         folder_id: null,
         is_public: false,
-        is_favorite: false
+        is_favorite: false,
+        files: [{
+          id: 0,
+          filename: 'main.js',
+          content: '',
+          language: 'javascript'
+        }]
       };
+      this.activeFileIndex = 0;
     },
     
-    // Draft auto-save functionality (supports up to 3 drafts)
+    // Draft auto-save functionality (single draft only - always latest)
     saveDraft() {
       if (!this.isEditing) return;
-      if (!this.editingSnippet.title && !this.editingSnippet.content) return;
       
-      // Generate a unique draft ID based on snippet ID or timestamp
-      const draftId = this.editingSnippet.id || `new-${Date.now()}`;
-      
-      // Load existing drafts
-      let drafts = this.loadDraftsFromStorage();
-      
-      // Find if this draft already exists
-      const existingIndex = drafts.findIndex(d => d.id === draftId);
+      // Check if there's content worth saving
+      const hasContent = this.editingSnippet.title || 
+                         this.editingSnippet.content ||
+                         (this.editingSnippet.files && this.editingSnippet.files.some(f => f.content));
+      if (!hasContent) return;
       
       const draft = {
-        id: draftId,
         snippet: { ...this.editingSnippet },
         savedAt: new Date().toISOString()
       };
-      
-      if (existingIndex >= 0) {
-        // Update existing draft
-        drafts[existingIndex] = draft;
-      } else {
-        // Add new draft, remove oldest if we have 3
-        if (drafts.length >= 3) {
-          drafts.shift(); // Remove oldest
-        }
-        drafts.push(draft);
-      }
-      
-      localStorage.setItem('snipo-drafts', JSON.stringify(drafts));
-    },
-    
-    loadDraftsFromStorage() {
-      try {
-        const draftsJson = localStorage.getItem('snipo-drafts');
-        if (!draftsJson) return [];
-        
-        let drafts = JSON.parse(draftsJson);
-        const now = new Date();
-        
-        // Filter out drafts older than 24 hours
-        drafts = drafts.filter(d => {
-          const savedAt = new Date(d.savedAt);
-          const hoursDiff = (now - savedAt) / (1000 * 60 * 60);
-          return hoursDiff <= 24;
-        });
-        
-        return drafts;
-      } catch (e) {
-        return [];
-      }
+      localStorage.setItem('snipo-draft', JSON.stringify(draft));
     },
     
     loadDraft() {
-      const drafts = this.loadDraftsFromStorage();
-      
       // Only show if we're not already viewing a snippet from URL
       if (this.showEditor) return;
       
-      // Filter drafts that have content
-      this.drafts = drafts.filter(d => d.snippet && (d.snippet.content || d.snippet.title));
-      
-      if (this.drafts.length > 0) {
-        this.showDraftList = true;
+      try {
+        const draftJson = localStorage.getItem('snipo-draft');
+        if (!draftJson) return;
+        
+        const draft = JSON.parse(draftJson);
+        if (!draft.snippet) return;
+        
+        // Check if draft is less than 24 hours old
+        const savedAt = new Date(draft.savedAt);
+        const now = new Date();
+        const hoursDiff = (now - savedAt) / (1000 * 60 * 60);
+        
+        if (hoursDiff > 24) {
+          this.clearDraft();
+          return;
+        }
+        
+        // Check if draft has content
+        const hasContent = draft.snippet.title || 
+                           draft.snippet.content ||
+                           (draft.snippet.files && draft.snippet.files.some(f => f.content));
+        if (hasContent) {
+          this.hasDraft = true;
+          this.draftSnippet = draft.snippet;
+          this.draftSavedAt = savedAt;
+        }
+      } catch (e) {
+        this.clearDraft();
       }
     },
     
-    restoreDraft(draft) {
-      if (draft && draft.snippet) {
-        this.editingSnippet = { ...draft.snippet };
+    restoreDraft() {
+      if (this.draftSnippet) {
+        this.editingSnippet = { ...this.draftSnippet };
+        this.activeFileIndex = 0;
         this.showEditor = true;
         this.isEditing = true;
-        this.showDraftList = false;
-        // Remove this draft from storage
-        this.removeDraftById(draft.id);
+        this.hasDraft = false;
+        this.clearDraft();
         showToast('Draft restored');
         this.$nextTick(() => this.highlightAll());
       }
     },
     
-    discardDraft(draft) {
-      this.removeDraftById(draft.id);
-      this.drafts = this.drafts.filter(d => d.id !== draft.id);
-      if (this.drafts.length === 0) {
-        this.showDraftList = false;
-      }
+    discardDraft() {
+      this.clearDraft();
+      this.hasDraft = false;
+      this.draftSnippet = null;
       showToast('Draft discarded');
     },
     
-    discardAllDrafts() {
-      localStorage.removeItem('snipo-drafts');
-      this.drafts = [];
-      this.showDraftList = false;
-      showToast('All drafts discarded');
-    },
-    
-    removeDraftById(draftId) {
-      let drafts = this.loadDraftsFromStorage();
-      drafts = drafts.filter(d => d.id !== draftId);
-      localStorage.setItem('snipo-drafts', JSON.stringify(drafts));
-    },
-    
     clearDraft() {
-      // Clear current editing snippet's draft if it exists
-      if (this.editingSnippet?.id) {
-        this.removeDraftById(this.editingSnippet.id);
-      }
-      // Also clear any "new" drafts that match current content
-      const drafts = this.loadDraftsFromStorage();
-      const newDrafts = drafts.filter(d => !d.id.startsWith('new-'));
-      localStorage.setItem('snipo-drafts', JSON.stringify(newDrafts));
-    },
-    
-    getDraftTitle(draft) {
-      return draft.snippet?.title || 'Untitled';
-    },
-    
-    getDraftPreview(draft) {
-      const content = draft.snippet?.content || '';
-      return content.substring(0, 50) + (content.length > 50 ? '...' : '');
+      localStorage.removeItem('snipo-draft');
     },
     
     // Auto-save on content change (debounced)
@@ -604,8 +601,19 @@ document.addEventListener('alpine:init', () => {
       await api.delete(`/api/v1/snippets/${this.deleteTarget.id}`);
       showToast('Snippet deleted');
       this.showDeleteModal = false;
+      this.showEditor = false;
       this.deleteTarget = null;
-      await this.loadSnippets();
+      
+      // Reload all data to update counts
+      await Promise.all([
+        this.loadSnippets(),
+        this.loadTags(),
+        this.loadFolders(),
+        this.loadFavoritesCount()
+      ]);
+      
+      // Update total count
+      this.totalSnippets = this.snippets.length;
     },
     
     async toggleFavorite(snippet) {
@@ -645,6 +653,141 @@ document.addEventListener('alpine:init', () => {
       } catch (err) {
         showToast('Failed to copy link', 'error');
       }
+    },
+    
+    // Multi-file support
+    get activeFile() {
+      const files = this.editingSnippet?.files || [];
+      if (files.length === 0) {
+        // Return legacy single-file as virtual file
+        return {
+          id: 0,
+          filename: 'main',
+          content: this.editingSnippet?.content || '',
+          language: this.editingSnippet?.language || 'javascript'
+        };
+      }
+      return files[this.activeFileIndex] || files[0];
+    },
+    
+    get hasMultipleFiles() {
+      return (this.editingSnippet?.files || []).length > 1;
+    },
+    
+    addFile() {
+      if (!this.editingSnippet.files) {
+        // Convert legacy single-file to multi-file
+        const ext = this.getFileExtension(this.editingSnippet.language);
+        this.editingSnippet.files = [{
+          id: 0,
+          filename: 'main.' + ext,
+          content: this.editingSnippet.content || '',
+          language: this.editingSnippet.language || 'javascript'
+        }];
+      }
+      
+      // Add new file with placeholder name
+      const newFile = {
+        id: 0,
+        filename: 'newfile.txt',
+        content: '',
+        language: 'plaintext'
+      };
+      this.editingSnippet.files.push(newFile);
+      this.activeFileIndex = this.editingSnippet.files.length - 1;
+      
+      // Focus the filename input after a tick
+      this.$nextTick(() => {
+        const input = document.querySelector('.filename-input');
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      });
+      
+      this.scheduleAutoSave();
+    },
+    
+    validateFilename() {
+      if (this.editingSnippet.files && this.editingSnippet.files.length > 0) {
+        const file = this.editingSnippet.files[this.activeFileIndex];
+        if (!file.filename || !file.filename.trim()) {
+          file.filename = 'untitled.txt';
+          showToast('Filename cannot be empty', 'warning');
+        }
+      }
+    },
+    
+    detectLanguageFromFilename(filename) {
+      const ext = filename.split('.').pop()?.toLowerCase();
+      const langMap = {
+        'js': 'javascript', 'ts': 'typescript', 'py': 'python', 'go': 'go',
+        'rs': 'rust', 'java': 'java', 'cs': 'csharp', 'cpp': 'cpp', 'c': 'cpp',
+        'rb': 'ruby', 'php': 'php', 'swift': 'swift', 'kt': 'kotlin',
+        'html': 'html', 'css': 'css', 'sql': 'sql', 'sh': 'bash',
+        'json': 'json', 'yaml': 'yaml', 'yml': 'yaml', 'md': 'markdown',
+        'txt': 'plaintext'
+      };
+      return langMap[ext] || null;
+    },
+    
+    removeFile(index) {
+      if (!this.editingSnippet.files || this.editingSnippet.files.length <= 1) {
+        showToast('Cannot remove the last file', 'warning');
+        return;
+      }
+      this.editingSnippet.files.splice(index, 1);
+      if (this.activeFileIndex >= this.editingSnippet.files.length) {
+        this.activeFileIndex = this.editingSnippet.files.length - 1;
+      }
+      this.scheduleAutoSave();
+    },
+    
+    selectFile(index) {
+      this.activeFileIndex = index;
+      this.$nextTick(() => this.highlightAll());
+    },
+    
+    updateActiveFileContent(content) {
+      if (this.editingSnippet.files && this.editingSnippet.files.length > 0) {
+        this.editingSnippet.files[this.activeFileIndex].content = content;
+      } else {
+        this.editingSnippet.content = content;
+      }
+      this.scheduleAutoSave();
+    },
+    
+    updateActiveFileLanguage(language) {
+      if (this.editingSnippet.files && this.editingSnippet.files.length > 0) {
+        this.editingSnippet.files[this.activeFileIndex].language = language;
+      } else {
+        this.editingSnippet.language = language;
+      }
+      this.$nextTick(() => this.highlightAll());
+      this.scheduleAutoSave();
+    },
+    
+    updateActiveFilename(filename) {
+      if (this.editingSnippet.files && this.editingSnippet.files.length > 0) {
+        this.editingSnippet.files[this.activeFileIndex].filename = filename;
+        // Auto-detect language from extension
+        const detectedLang = this.detectLanguageFromFilename(filename);
+        if (detectedLang) {
+          this.editingSnippet.files[this.activeFileIndex].language = detectedLang;
+        }
+      }
+      this.scheduleAutoSave();
+    },
+    
+    getFileExtension(language) {
+      const extMap = {
+        'javascript': 'js', 'typescript': 'ts', 'python': 'py', 'go': 'go',
+        'rust': 'rs', 'java': 'java', 'csharp': 'cs', 'cpp': 'cpp',
+        'ruby': 'rb', 'php': 'php', 'swift': 'swift', 'kotlin': 'kt',
+        'html': 'html', 'css': 'css', 'sql': 'sql', 'bash': 'sh',
+        'json': 'json', 'yaml': 'yaml', 'markdown': 'md', 'plaintext': 'txt'
+      };
+      return extMap[language] || 'txt';
     },
     
     formatDate(dateStr) {

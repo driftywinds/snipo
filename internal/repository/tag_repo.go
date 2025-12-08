@@ -82,9 +82,16 @@ func (r *TagRepository) GetByName(ctx context.Context, name string) (*models.Tag
 	return tag, nil
 }
 
-// List retrieves all tags
+// List retrieves all tags with snippet counts
 func (r *TagRepository) List(ctx context.Context) ([]models.Tag, error) {
-	query := `SELECT id, name, color, created_at FROM tags ORDER BY name ASC`
+	query := `
+		SELECT t.id, t.name, t.color, t.created_at,
+		       (SELECT COUNT(*) FROM snippet_tags st 
+		        INNER JOIN snippets s ON s.id = st.snippet_id 
+		        WHERE st.tag_id = t.id) as snippet_count
+		FROM tags t
+		ORDER BY t.name ASC
+	`
 
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
@@ -95,7 +102,7 @@ func (r *TagRepository) List(ctx context.Context) ([]models.Tag, error) {
 	var tags []models.Tag
 	for rows.Next() {
 		var tag models.Tag
-		if err := rows.Scan(&tag.ID, &tag.Name, &tag.Color, &tag.CreatedAt); err != nil {
+		if err := rows.Scan(&tag.ID, &tag.Name, &tag.Color, &tag.CreatedAt, &tag.SnippetCount); err != nil {
 			return nil, fmt.Errorf("failed to scan tag: %w", err)
 		}
 		tags = append(tags, tag)

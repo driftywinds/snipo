@@ -243,8 +243,8 @@
             </div>
         </header>
         
-        <!-- Draft recovery banner (supports multiple drafts) -->
-        <div class="draft-banner" x-show="showDraftList && drafts.length > 0" x-cloak>
+        <!-- Draft recovery banner (single draft) -->
+        <div class="draft-banner" x-show="hasDraft" x-cloak>
             <div class="draft-banner-content">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -252,24 +252,13 @@
                     <line x1="16" y1="13" x2="8" y2="13"></line>
                     <line x1="16" y1="17" x2="8" y2="17"></line>
                 </svg>
-                <span>You have <span x-text="drafts.length"></span> unsaved draft<span x-show="drafts.length > 1">s</span></span>
+                <span>You have an unsaved draft
+                    <strong x-show="draftSnippet && draftSnippet.title" x-text="draftSnippet ? draftSnippet.title : ''"></strong>
+                </span>
             </div>
-            <div class="draft-list">
-                <template x-for="draft in drafts" :key="draft.id">
-                    <div class="draft-item">
-                        <div class="draft-item-info">
-                            <span class="draft-item-title" x-text="getDraftTitle(draft)"></span>
-                            <span class="draft-item-time" x-text="new Date(draft.savedAt).toLocaleString()"></span>
-                        </div>
-                        <div class="draft-item-actions">
-                            <button class="btn-secondary btn-sm" @click="discardDraft(draft)">Discard</button>
-                            <button class="btn-primary btn-sm" @click="restoreDraft(draft)">Restore</button>
-                        </div>
-                    </div>
-                </template>
-            </div>
-            <div class="draft-banner-actions" x-show="drafts.length > 1">
-                <button class="btn-secondary" @click="discardAllDrafts()">Discard All</button>
+            <div class="draft-banner-actions">
+                <button class="btn-secondary" @click="discardDraft()">Discard</button>
+                <button class="btn-primary" @click="restoreDraft()">Restore Draft</button>
             </div>
         </div>
         
@@ -435,8 +424,8 @@
                         <span x-text="editingSnippet.description"></span>
                     </div>
                     <div class="preview-meta-item">
-                        <span class="preview-meta-label">Language</span>
-                        <span class="language-badge" :style="{ background: getLanguageColor(editingSnippet.language) }" x-text="editingSnippet.language"></span>
+                        <span class="preview-meta-label" x-text="(editingSnippet.files && editingSnippet.files.length > 0) ? 'File' : 'Language'">Language</span>
+                        <span class="language-badge" :style="{ background: getLanguageColor(activeFile?.language || editingSnippet.language) }" x-text="activeFile?.language || editingSnippet.language"></span>
                     </div>
                     <div class="preview-meta-item" x-show="editingSnippet.folder_id">
                         <span class="preview-meta-label">Folder</span>
@@ -455,9 +444,32 @@
                     </div>
                 </div>
                 
+                <!-- File bar for multi-file preview -->
+                <div class="preview-file-bar" x-show="editingSnippet.files && editingSnippet.files.length > 0">
+                    <div class="preview-file-current">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        <span class="preview-filename" x-text="activeFile?.filename || ''"></span>
+                    </div>
+                    <div class="file-tabs-compact" x-show="editingSnippet.files.length > 1">
+                        <template x-for="(file, index) in editingSnippet.files" :key="index">
+                            <button class="file-tab-compact" 
+                                    :class="{ 'active': activeFileIndex === index }"
+                                    @click="selectFile(index); $nextTick(() => highlightAll())"
+                                    :title="file.filename">
+                                <span x-text="file.filename"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+                
                 <!-- Full code preview -->
-                <div class="preview-code">
-                    <pre><code :class="'language-' + editingSnippet.language" x-text="editingSnippet.content"></code></pre>
+                <div class="preview-code-wrapper">
+                    <div class="preview-code-scroll">
+                        <pre><code :class="'language-' + (activeFile?.language || editingSnippet.language)" x-text="activeFile?.content || editingSnippet.content"></code></pre>
+                    </div>
                 </div>
             </div>
             
@@ -475,8 +487,9 @@
                     </div>
                     
                     <div class="editor-field-inline compact">
-                        <label>Language</label>
-                        <select x-model="editingSnippet.language" @change="$nextTick(() => highlightAll())">
+                        <label x-text="(editingSnippet.files && editingSnippet.files.length > 0) ? 'File Language' : 'Language'">Language</label>
+                        <select :value="activeFile?.language || editingSnippet.language" 
+                                @change="updateActiveFileLanguage($event.target.value)">
                             <option value="javascript">JavaScript</option>
                             <option value="typescript">TypeScript</option>
                             <option value="python">Python</option>
@@ -516,23 +529,80 @@
                     </label>
                 </div>
                 
-                <!-- Main edit area: code split + tags sidebar -->
-                <div class="editor-main-with-sidebar">
-                    <!-- Code split (editor left, preview right) -->
-                    <div class="code-split">
-                        <textarea 
-                            class="code-textarea"
-                            x-model="editingSnippet.content"
-                            placeholder="Paste your code here..."
-                            spellcheck="false"
-                            @input="$nextTick(() => highlightAll()); scheduleAutoSave()"
-                        ></textarea>
-                        <div class="code-preview">
-                            <pre><code :class="'language-' + editingSnippet.language" x-text="editingSnippet.content"></code></pre>
+                <!-- Main edit area: editor + tags sidebar -->
+                <div class="editor-main-row">
+                    <!-- Left: Editor area -->
+                    <div class="editor-left">
+                        <!-- File bar: filename input + tabs -->
+                        <div class="file-bar">
+                            <!-- Current file name (editable) -->
+                            <div class="current-file-name">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                                <input type="text" 
+                                       class="filename-input"
+                                       :value="activeFile?.filename || ''"
+                                       @input="updateActiveFilename($event.target.value)"
+                                       @blur="validateFilename()"
+                                       placeholder="filename.ext"
+                                       x-show="editingSnippet.files && editingSnippet.files.length > 0">
+                                <span class="filename-placeholder" 
+                                      x-show="!editingSnippet.files || editingSnippet.files.length === 0"
+                                      @click="addFile()">Click to add file...</span>
+                            </div>
+                            
+                            <!-- File tabs (when multiple files) -->
+                            <div class="file-tabs-compact" x-show="editingSnippet.files && editingSnippet.files.length > 1">
+                                <template x-for="(file, index) in editingSnippet.files" :key="index">
+                                    <button class="file-tab-compact" 
+                                            :class="{ 'active': activeFileIndex === index }"
+                                            @click="selectFile(index)"
+                                            :title="file.filename">
+                                        <span x-text="file.filename"></span>
+                                        <span class="file-tab-close-sm" 
+                                              @click.stop="removeFile(index)"
+                                              x-show="editingSnippet.files.length > 1">×</span>
+                                    </button>
+                                </template>
+                            </div>
+                            
+                            <!-- Add file button -->
+                            <button class="file-add-btn" @click="addFile()" title="Add file" x-show="editingSnippet.files && editingSnippet.files.length > 0">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <!-- Code editor -->
+                        <div class="code-editor-wrapper">
+                            <!-- Multi-file mode -->
+                            <template x-if="editingSnippet.files && editingSnippet.files.length > 0">
+                                <textarea 
+                                    class="code-textarea"
+                                    :value="activeFile.content"
+                                    @input="updateActiveFileContent($event.target.value)"
+                                    placeholder="Paste your code here..."
+                                    spellcheck="false"
+                                ></textarea>
+                            </template>
+                            <!-- Single-file mode (legacy) -->
+                            <template x-if="!editingSnippet.files || editingSnippet.files.length === 0">
+                                <textarea 
+                                    class="code-textarea"
+                                    x-model="editingSnippet.content"
+                                    placeholder="Paste your code here..."
+                                    spellcheck="false"
+                                    @input="scheduleAutoSave()"
+                                ></textarea>
+                            </template>
                         </div>
                     </div>
                     
-                    <!-- Tags sidebar (right) -->
+                    <!-- Right: Tags sidebar -->
                     <div class="tags-sidebar">
                         <div class="tags-sidebar-header">
                             <label>Tags</label>

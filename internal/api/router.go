@@ -17,13 +17,14 @@ import (
 
 // RouterConfig holds router configuration
 type RouterConfig struct {
-	DB              *sql.DB
-	Logger          *slog.Logger
-	AuthService     *auth.Service
-	Version         string
-	Commit          string
-	RateLimit       int
-	RateLimitWindow int // in seconds
+	DB                 *sql.DB
+	Logger             *slog.Logger
+	AuthService        *auth.Service
+	Version            string
+	Commit             string
+	RateLimit          int
+	RateLimitWindow    int // in seconds
+	MaxFilesPerSnippet int
 }
 
 // NewRouter creates and configures the HTTP router
@@ -44,11 +45,14 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	tagRepo := repository.NewTagRepository(cfg.DB)
 	folderRepo := repository.NewFolderRepository(cfg.DB)
 	tokenRepo := repository.NewTokenRepository(cfg.DB)
+	fileRepo := repository.NewSnippetFileRepository(cfg.DB)
 
 	// Create services
 	snippetService := services.NewSnippetService(snippetRepo, cfg.Logger).
 		WithTagRepo(tagRepo).
-		WithFolderRepo(folderRepo)
+		WithFolderRepo(folderRepo).
+		WithFileRepo(fileRepo).
+		WithMaxFiles(cfg.MaxFilesPerSnippet)
 
 	// Create handlers
 	snippetHandler := handlers.NewSnippetHandler(snippetService)

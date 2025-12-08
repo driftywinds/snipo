@@ -20,11 +20,12 @@ type Config struct {
 
 // ServerConfig holds HTTP server settings
 type ServerConfig struct {
-	Host         string
-	Port         int
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
-	TrustProxy   bool
+	Host               string
+	Port               int
+	ReadTimeout        time.Duration
+	WriteTimeout       time.Duration
+	TrustProxy         bool
+	MaxFilesPerSnippet int
 }
 
 // DatabaseConfig holds SQLite settings
@@ -72,6 +73,7 @@ func Load() (*Config, error) {
 	cfg.Server.ReadTimeout = getEnvDuration("SNIPO_READ_TIMEOUT", 30*time.Second)
 	cfg.Server.WriteTimeout = getEnvDuration("SNIPO_WRITE_TIMEOUT", 30*time.Second)
 	cfg.Server.TrustProxy = getEnvBool("SNIPO_TRUST_PROXY", false)
+	cfg.Server.MaxFilesPerSnippet = getEnvInt("SNIPO_MAX_FILES_PER_SNIPPET", 10)
 
 	// Database
 	cfg.Database.Path = getEnv("SNIPO_DB_PATH", "./data/snipo.db")

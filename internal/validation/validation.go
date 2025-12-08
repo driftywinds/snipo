@@ -61,11 +61,29 @@ func ValidateSnippetInput(input *models.SnippetInput) ValidationErrors {
 		errs = append(errs, ValidationError{Field: "title", Message: "Title must be less than 200 characters"})
 	}
 
-	// Content validation
-	if strings.TrimSpace(input.Content) == "" {
+	// Content validation (skip if multi-file snippet with files)
+	hasFiles := len(input.Files) > 0
+	if !hasFiles && strings.TrimSpace(input.Content) == "" {
 		errs = append(errs, ValidationError{Field: "content", Message: "Content is required"})
 	} else if len(input.Content) > 1024*1024 { // 1MB limit
 		errs = append(errs, ValidationError{Field: "content", Message: "Content must be less than 1MB"})
+	}
+
+	// Validate files if present
+	for i, file := range input.Files {
+		if strings.TrimSpace(file.Filename) == "" {
+			errs = append(errs, ValidationError{Field: "files", Message: "Filename is required for all files"})
+		}
+		if len(file.Content) > 1024*1024 { // 1MB limit per file
+			errs = append(errs, ValidationError{Field: "files", Message: "File content must be less than 1MB each"})
+		}
+		// Validate file language
+		lang := strings.ToLower(strings.TrimSpace(file.Language))
+		if lang == "" {
+			input.Files[i].Language = "plaintext"
+		} else if !allowedLanguages[lang] {
+			input.Files[i].Language = "plaintext" // Default to plaintext if invalid
+		}
 	}
 
 	// Language validation

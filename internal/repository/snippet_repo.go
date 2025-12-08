@@ -135,9 +135,22 @@ func (r *SnippetRepository) Update(ctx context.Context, id string, input *models
 	return snippet, nil
 }
 
-// Delete removes a snippet by ID
+// Delete removes a snippet by ID and cleans up related data
 func (r *SnippetRepository) Delete(ctx context.Context, id string) error {
-	result, err := r.db.ExecContext(ctx, "DELETE FROM snippets WHERE id = ?", id)
+	// Start transaction for atomic delete
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Delete related data first (in case CASCADE doesn't work)
+	_, _ = tx.ExecContext(ctx, "DELETE FROM snippet_tags WHERE snippet_id = ?", id)
+	_, _ = tx.ExecContext(ctx, "DELETE FROM snippet_folders WHERE snippet_id = ?", id)
+	_, _ = tx.ExecContext(ctx, "DELETE FROM snippet_files WHERE snippet_id = ?", id)
+
+	// Delete the snippet
+	result, err := tx.ExecContext(ctx, "DELETE FROM snippets WHERE id = ?", id)
 	if err != nil {
 		return fmt.Errorf("failed to delete snippet: %w", err)
 	}
@@ -149,6 +162,10 @@ func (r *SnippetRepository) Delete(ctx context.Context, id string) error {
 
 	if rows == 0 {
 		return sql.ErrNoRows
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil

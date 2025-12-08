@@ -65,6 +65,21 @@ CREATE TABLE IF NOT EXISTS snippet_folders (
     FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE
 );
 
+-- Snippet files (multi-file support)
+CREATE TABLE IF NOT EXISTS snippet_files (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    snippet_id TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    content TEXT NOT NULL,
+    language TEXT DEFAULT 'plaintext',
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (snippet_id) REFERENCES snippets(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_snippet_files_snippet ON snippet_files(snippet_id);
+
 -- Application settings (single row)
 CREATE TABLE IF NOT EXISTS settings (
     id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -142,11 +157,28 @@ END;
 INSERT OR IGNORE INTO settings (id) VALUES (1);
 `
 
+// Migration 2: Add snippet_files table for multi-file support
+const addSnippetFilesSQL = `
+-- Snippet files (multi-file support)
+CREATE TABLE IF NOT EXISTS snippet_files (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    snippet_id TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    content TEXT NOT NULL,
+    language TEXT DEFAULT 'plaintext',
+    sort_order INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (snippet_id) REFERENCES snippets(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_snippet_files_snippet ON snippet_files(snippet_id);
+`
+
 // getMigrations returns all available migrations in order
 func getMigrations() []Migration {
 	return []Migration{
 		{Version: 1, Name: "initial_schema", SQL: initialSchemaSQL},
-		// Future migrations added here, e.g.:
-		// {Version: 2, Name: "add_new_feature", SQL: addNewFeatureSQL},
+		{Version: 2, Name: "add_snippet_files", SQL: addSnippetFilesSQL},
 	}
 }

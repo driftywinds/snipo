@@ -100,13 +100,14 @@ func runServer() {
 
 	// Create router
 	router := api.NewRouter(api.RouterConfig{
-		DB:              db.DB,
-		Logger:          logger,
-		AuthService:     authService,
-		Version:         Version,
-		Commit:          Commit,
-		RateLimit:       cfg.Auth.RateLimit,
-		RateLimitWindow: int(cfg.Auth.RateLimitWindow.Seconds()),
+		DB:                 db.DB,
+		Logger:             logger,
+		AuthService:        authService,
+		Version:            Version,
+		Commit:             Commit,
+		RateLimit:          cfg.Auth.RateLimit,
+		RateLimitWindow:    int(cfg.Auth.RateLimitWindow.Seconds()),
+		MaxFilesPerSnippet: cfg.Server.MaxFilesPerSnippet,
 	})
 
 	// Create server

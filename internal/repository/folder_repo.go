@@ -74,7 +74,9 @@ func (r *FolderRepository) GetByID(ctx context.Context, id int64) (*models.Folde
 func (r *FolderRepository) List(ctx context.Context) ([]models.Folder, error) {
 	query := `
 		SELECT f.id, f.name, f.parent_id, f.icon, f.sort_order, f.created_at,
-		       (SELECT COUNT(*) FROM snippet_folders sf WHERE sf.folder_id = f.id) as snippet_count
+		       (SELECT COUNT(*) FROM snippet_folders sf 
+		        INNER JOIN snippets s ON s.id = sf.snippet_id 
+		        WHERE sf.folder_id = f.id) as snippet_count
 		FROM folders f
 		ORDER BY f.sort_order ASC, f.name ASC
 	`

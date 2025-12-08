@@ -4,13 +4,25 @@ import (
 	"time"
 )
 
+// SnippetFile represents a file within a snippet
+type SnippetFile struct {
+	ID        int64     `json:"id"`
+	SnippetID string    `json:"snippet_id,omitempty"`
+	Filename  string    `json:"filename"`
+	Content   string    `json:"content"`
+	Language  string    `json:"language"`
+	SortOrder int       `json:"sort_order"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+}
+
 // Snippet represents a code snippet
 type Snippet struct {
 	ID          string    `json:"id"`
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
-	Content     string    `json:"content"`
-	Language    string    `json:"language"`
+	Content     string    `json:"content"`  // Primary/legacy content (first file)
+	Language    string    `json:"language"` // Primary/legacy language
 	IsFavorite  bool      `json:"is_favorite"`
 	IsPublic    bool      `json:"is_public"`
 	ViewCount   int       `json:"view_count"`
@@ -20,19 +32,29 @@ type Snippet struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 
 	// Relationships (populated when needed)
-	Tags    []Tag    `json:"tags,omitempty"`
-	Folders []Folder `json:"folders,omitempty"`
+	Tags    []Tag         `json:"tags,omitempty"`
+	Folders []Folder      `json:"folders,omitempty"`
+	Files   []SnippetFile `json:"files,omitempty"` // Multi-file support
+}
+
+// SnippetFileInput represents input for a file within a snippet
+type SnippetFileInput struct {
+	ID       int64  `json:"id,omitempty"` // 0 for new files
+	Filename string `json:"filename"`
+	Content  string `json:"content"`
+	Language string `json:"language"`
 }
 
 // SnippetInput represents input for creating/updating a snippet
 type SnippetInput struct {
-	Title       string   `json:"title"`
-	Description string   `json:"description"`
-	Content     string   `json:"content"`
-	Language    string   `json:"language"`
-	Tags        []string `json:"tags,omitempty"`
-	FolderID    *int64   `json:"folder_id,omitempty"`
-	IsPublic    bool     `json:"is_public"`
+	Title       string             `json:"title"`
+	Description string             `json:"description"`
+	Content     string             `json:"content"`  // Legacy single-file content
+	Language    string             `json:"language"` // Legacy single-file language
+	Tags        []string           `json:"tags,omitempty"`
+	FolderID    *int64             `json:"folder_id,omitempty"`
+	IsPublic    bool               `json:"is_public"`
+	Files       []SnippetFileInput `json:"files,omitempty"` // Multi-file support
 }
 
 // SnippetFilter represents filter options for listing snippets

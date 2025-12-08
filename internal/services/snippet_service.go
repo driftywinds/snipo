@@ -19,17 +19,20 @@ var (
 
 // SnippetService handles snippet business logic
 type SnippetService struct {
-	repo       *repository.SnippetRepository
-	tagRepo    *repository.TagRepository
-	folderRepo *repository.FolderRepository
-	logger     *slog.Logger
+	repo               *repository.SnippetRepository
+	tagRepo            *repository.TagRepository
+	folderRepo         *repository.FolderRepository
+	fileRepo           *repository.SnippetFileRepository
+	logger             *slog.Logger
+	maxFilesPerSnippet int
 }
 
 // NewSnippetService creates a new snippet service
 func NewSnippetService(repo *repository.SnippetRepository, logger *slog.Logger) *SnippetService {
 	return &SnippetService{
-		repo:   repo,
-		logger: logger,
+		repo:               repo,
+		logger:             logger,
+		maxFilesPerSnippet: 10, // Default
 	}
 }
 
@@ -42,6 +45,18 @@ func (s *SnippetService) WithTagRepo(tagRepo *repository.TagRepository) *Snippet
 // WithFolderRepo adds folder repository to the service
 func (s *SnippetService) WithFolderRepo(folderRepo *repository.FolderRepository) *SnippetService {
 	s.folderRepo = folderRepo
+	return s
+}
+
+// WithFileRepo adds file repository to the service
+func (s *SnippetService) WithFileRepo(fileRepo *repository.SnippetFileRepository) *SnippetService {
+	s.fileRepo = fileRepo
+	return s
+}
+
+// WithMaxFiles sets the maximum files per snippet
+func (s *SnippetService) WithMaxFiles(max int) *SnippetService {
+	s.maxFilesPerSnippet = max
 	return s
 }
 
@@ -80,6 +95,21 @@ func (s *SnippetService) Create(ctx context.Context, input *models.SnippetInput)
 		}
 	}
 
+	// Create files if provided
+	if s.fileRepo != nil && len(input.Files) > 0 {
+		// Limit files
+		files := input.Files
+		if len(files) > s.maxFilesPerSnippet {
+			files = files[:s.maxFilesPerSnippet]
+		}
+		createdFiles, err := s.fileRepo.SyncFiles(ctx, snippet.ID, files)
+		if err != nil {
+			s.logger.Warn("failed to create snippet files", "id", snippet.ID, "error", err)
+		} else {
+			snippet.Files = createdFiles
+		}
+	}
+
 	s.logger.Info("snippet created", "id", snippet.ID, "title", snippet.Title)
 	return snippet, nil
 }
@@ -108,6 +138,12 @@ func (s *SnippetService) GetByID(ctx context.Context, id string) (*models.Snippe
 		snippet.Folders = folders
 	}
 
+	// Fetch files
+	if s.fileRepo != nil {
+		files, _ := s.fileRepo.GetBySnippetID(ctx, id)
+		snippet.Files = files
+	}
+
 	return snippet, nil
 }
 
@@ -128,6 +164,12 @@ func (s *SnippetService) GetByIDPublic(ctx context.Context, id string) (*models.
 			s.logger.Warn("failed to increment view count", "id", id, "error", err)
 		}
 	}()
+
+	// Fetch files for public view
+	if s.fileRepo != nil {
+		files, _ := s.fileRepo.GetBySnippetID(ctx, id)
+		snippet.Files = files
+	}
 
 	return snippet, nil
 }
@@ -170,6 +212,21 @@ func (s *SnippetService) Update(ctx context.Context, id string, input *models.Sn
 		}
 		folders, _ := s.folderRepo.GetSnippetFolders(ctx, id)
 		snippet.Folders = folders
+	}
+
+	// Update files if provided
+	if s.fileRepo != nil && input.Files != nil {
+		// Limit files
+		files := input.Files
+		if len(files) > s.maxFilesPerSnippet {
+			files = files[:s.maxFilesPerSnippet]
+		}
+		syncedFiles, err := s.fileRepo.SyncFiles(ctx, id, files)
+		if err != nil {
+			s.logger.Warn("failed to update snippet files", "id", id, "error", err)
+		} else {
+			snippet.Files = syncedFiles
+		}
 	}
 
 	s.logger.Info("snippet updated", "id", id)

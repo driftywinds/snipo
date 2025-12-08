@@ -82,13 +82,17 @@ func (h *Handler) PublicSnippet(w http.ResponseWriter, r *http.Request) {
 // render renders a template with layout
 func (h *Handler) render(w http.ResponseWriter, layout, content string, data interface{}) {
 	// Create a new template that combines layout and content
-	tmpl := template.Must(template.ParseFS(templatesFS,
+	tmpl, err := template.ParseFS(templatesFS,
 		filepath.Join("templates", layout),
 		filepath.Join("templates", content),
-	))
+	)
+	if err != nil {
+		http.Error(w, "Template parse error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(w, layout, data); err != nil {
-		http.Error(w, "Template error", http.StatusInternalServerError)
+		http.Error(w, "Template execute error: "+err.Error(), http.StatusInternalServerError)
 	}
 }
