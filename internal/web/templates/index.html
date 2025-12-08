@@ -705,6 +705,14 @@
                     </svg>
                     API Keys
                 </button>
+                <button class="settings-tab" :class="{ active: settingsTab === 'backup' }" @click="settingsTab = 'backup'; loadS3Status()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Backup
+                </button>
             </div>
             
             <div class="modal-body">
@@ -798,6 +806,146 @@
                                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                     </svg>
                                 </button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                
+                <!-- Backup tab -->
+                <div x-show="settingsTab === 'backup'">
+                    <!-- Export Section -->
+                    <div class="backup-section">
+                        <h4 style="margin-bottom: 1rem;">Export Backup</h4>
+                        <p class="text-sm text-muted" style="margin-bottom: 1rem;">
+                            Download a complete backup of all your snippets, tags, and folders.
+                        </p>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                            <div class="editor-field">
+                                <label>Format</label>
+                                <select x-model="backupOptions.format">
+                                    <option value="json">JSON</option>
+                                    <option value="zip">ZIP Archive</option>
+                                </select>
+                            </div>
+                            <div class="editor-field">
+                                <label>Password (optional)</label>
+                                <input type="password" x-model="backupOptions.password" placeholder="Encrypt backup">
+                            </div>
+                        </div>
+                        
+                        <button class="btn-primary" @click="exportBackup()" :disabled="backupLoading" style="width: 100%;">
+                            <span x-show="!backupLoading">Download Backup</span>
+                            <span x-show="backupLoading">Exporting...</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Import Section -->
+                    <div class="backup-section" style="margin-top: 2rem;">
+                        <h4 style="margin-bottom: 1rem;">Import Backup</h4>
+                        <p class="text-sm text-muted" style="margin-bottom: 1rem;">
+                            Restore snippets from a backup file.
+                        </p>
+                        
+                        <div class="editor-field">
+                            <label>Backup File</label>
+                            <input type="file" @change="backupFile = $event.target.files[0]" accept=".json,.zip,.enc">
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                            <div class="editor-field">
+                                <label>Import Strategy</label>
+                                <select x-model="importOptions.strategy">
+                                    <option value="merge">Merge (add new)</option>
+                                    <option value="skip">Skip existing</option>
+                                    <option value="replace">Replace all</option>
+                                </select>
+                            </div>
+                            <div class="editor-field">
+                                <label>Password (if encrypted)</label>
+                                <input type="password" x-model="importOptions.password" placeholder="Decryption password">
+                            </div>
+                        </div>
+                        
+                        <button class="btn-primary" @click="importBackup()" :disabled="backupLoading || !backupFile" style="width: 100%;">
+                            <span x-show="!backupLoading">Import Backup</span>
+                            <span x-show="backupLoading">Importing...</span>
+                        </button>
+                        
+                        <div x-show="importResult" class="import-result" style="margin-top: 1rem; padding: 1rem; background: var(--snipo-bg-tertiary); border-radius: 8px;">
+                            <p class="text-sm"><strong>Import Complete:</strong></p>
+                            <ul class="text-sm" style="margin: 0.5rem 0 0 1rem;">
+                                <li x-text="'Snippets: ' + (importResult?.snippets_imported || 0)"></li>
+                                <li x-text="'Tags: ' + (importResult?.tags_imported || 0)"></li>
+                                <li x-text="'Folders: ' + (importResult?.folders_imported || 0)"></li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- S3 Section -->
+                    <div class="backup-section" style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--snipo-border);">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                            <h4>S3 Cloud Backup</h4>
+                            <span x-show="s3Status.enabled" class="badge badge-success">Enabled</span>
+                            <span x-show="!s3Status.enabled" class="badge badge-muted">Not Configured</span>
+                        </div>
+                        
+                        <template x-if="!s3Status.enabled">
+                            <p class="text-sm text-muted">
+                                S3 backup is not configured. Set the following environment variables to enable:
+                                <code style="display: block; margin-top: 0.5rem; padding: 0.5rem; background: var(--snipo-bg-tertiary); border-radius: 4px; font-size: 0.75rem;">
+                                    SNIPO_S3_ENABLED=true<br>
+                                    SNIPO_S3_ENDPOINT=s3.amazonaws.com<br>
+                                    SNIPO_S3_ACCESS_KEY=your-key<br>
+                                    SNIPO_S3_SECRET_KEY=your-secret<br>
+                                    SNIPO_S3_BUCKET=your-bucket
+                                </code>
+                            </p>
+                        </template>
+                        
+                        <template x-if="s3Status.enabled">
+                            <div>
+                                <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                                    <button class="btn-primary" @click="syncToS3()" :disabled="backupLoading" style="flex: 1;">
+                                        <span x-show="!backupLoading">Sync to S3</span>
+                                        <span x-show="backupLoading">Syncing...</span>
+                                    </button>
+                                    <button @click="loadS3Backups()" :disabled="backupLoading" style="flex: 1;">
+                                        Refresh List
+                                    </button>
+                                </div>
+                                
+                                <div class="s3-backups-list">
+                                    <h5 style="margin-bottom: 0.5rem;">Available Backups</h5>
+                                    <div x-show="s3Backups.length === 0" class="text-sm text-muted">
+                                        No backups in S3 yet.
+                                    </div>
+                                    <template x-for="backup in s3Backups" :key="backup.key">
+                                        <div class="s3-backup-item">
+                                            <div class="s3-backup-info">
+                                                <div class="s3-backup-name" x-text="backup.key.replace('backups/', '')"></div>
+                                                <div class="s3-backup-meta text-sm text-muted">
+                                                    <span x-text="formatFileSize(backup.size)"></span> •
+                                                    <span x-text="formatDate(backup.last_modified)"></span>
+                                                </div>
+                                            </div>
+                                            <div style="display: flex; gap: 0.5rem;">
+                                                <button class="btn-icon" @click="restoreFromS3(backup.key)" title="Restore">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                                                        <path d="M3 3v5h5"></path>
+                                                    </svg>
+                                                </button>
+                                                <button class="btn-icon danger" @click="deleteS3Backup(backup.key)" title="Delete">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
                             </div>
                         </template>
                     </div>

@@ -148,3 +148,55 @@ type SnippetListResponse struct {
 	Data       []Snippet  `json:"data"`
 	Pagination Pagination `json:"pagination"`
 }
+
+// BackupData represents a complete backup of all data
+type BackupData struct {
+	Version   string    `json:"version"`
+	CreatedAt time.Time `json:"created_at"`
+	Snippets  []Snippet `json:"snippets"`
+	Tags      []Tag     `json:"tags"`
+	Folders   []Folder  `json:"folders"`
+}
+
+// ExportOptions configures backup export behavior
+type ExportOptions struct {
+	Format   string `json:"format"`   // "json" or "zip"
+	Password string `json:"password"` // Optional encryption password
+}
+
+// ImportOptions configures backup import behavior
+type ImportOptions struct {
+	Strategy string `json:"strategy"` // "replace", "merge", "skip"
+	Password string `json:"password"` // Decryption password if encrypted
+}
+
+// ImportResult contains the results of an import operation
+type ImportResult struct {
+	SnippetsImported int      `json:"snippets_imported"`
+	TagsImported     int      `json:"tags_imported"`
+	FoldersImported  int      `json:"folders_imported"`
+	Errors           []string `json:"errors,omitempty"`
+}
+
+// S3BackupInfo represents info about a backup stored in S3
+type S3BackupInfo struct {
+	Key          string    `json:"key"`
+	Size         int64     `json:"size"`
+	LastModified time.Time `json:"last_modified"`
+}
+
+// S3SyncResult contains the results of an S3 sync operation
+type S3SyncResult struct {
+	Uploaded   int       `json:"uploaded"`
+	Errors     []string  `json:"errors,omitempty"`
+	StartedAt  time.Time `json:"started_at"`
+	FinishedAt time.Time `json:"finished_at"`
+}
+
+// S3RestoreResult contains the results of an S3 restore operation
+type S3RestoreResult struct {
+	Restored   int       `json:"restored"`
+	Errors     []string  `json:"errors,omitempty"`
+	StartedAt  time.Time `json:"started_at"`
+	FinishedAt time.Time `json:"finished_at"`
+}

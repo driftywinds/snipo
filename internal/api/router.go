@@ -10,8 +10,10 @@ import (
 	"github.com/MohamedElashri/snipo/internal/api/handlers"
 	"github.com/MohamedElashri/snipo/internal/api/middleware"
 	"github.com/MohamedElashri/snipo/internal/auth"
+	"github.com/MohamedElashri/snipo/internal/config"
 	"github.com/MohamedElashri/snipo/internal/repository"
 	"github.com/MohamedElashri/snipo/internal/services"
+	"github.com/MohamedElashri/snipo/internal/storage"
 	"github.com/MohamedElashri/snipo/internal/web"
 )
 
@@ -25,6 +27,7 @@ type RouterConfig struct {
 	RateLimit          int
 	RateLimitWindow    int // in seconds
 	MaxFilesPerSnippet int
+	S3Config           *config.S3Config
 }
 
 // NewRouter creates and configures the HTTP router
@@ -54,6 +57,28 @@ func NewRouter(cfg RouterConfig) http.Handler {
 		WithFileRepo(fileRepo).
 		WithMaxFiles(cfg.MaxFilesPerSnippet)
 
+	// Create backup service
+	backupService := services.NewBackupService(cfg.DB, snippetService, tagRepo, folderRepo, fileRepo, cfg.Logger)
+
+	// Create S3 sync service if configured
+	var s3SyncService *services.S3SyncService
+	if cfg.S3Config != nil && cfg.S3Config.Enabled {
+		s3Storage, err := storage.NewS3Storage(storage.S3Config{
+			Endpoint:        cfg.S3Config.Endpoint,
+			AccessKeyID:     cfg.S3Config.AccessKeyID,
+			SecretAccessKey: cfg.S3Config.SecretAccessKey,
+			Bucket:          cfg.S3Config.Bucket,
+			Region:          cfg.S3Config.Region,
+			UseSSL:          cfg.S3Config.UseSSL,
+		})
+		if err != nil {
+			cfg.Logger.Warn("failed to initialize S3 storage", "error", err)
+		} else {
+			s3SyncService = services.NewS3SyncService(s3Storage, backupService, cfg.Logger)
+			cfg.Logger.Info("S3 storage initialized", "bucket", cfg.S3Config.Bucket)
+		}
+	}
+
 	// Create handlers
 	snippetHandler := handlers.NewSnippetHandler(snippetService)
 	tagHandler := handlers.NewTagHandler(tagRepo)
@@ -61,6 +86,7 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	tokenHandler := handlers.NewTokenHandler(tokenRepo)
 	authHandler := handlers.NewAuthHandler(cfg.AuthService)
 	healthHandler := handlers.NewHealthHandler(cfg.DB, cfg.Version, cfg.Commit)
+	backupHandler := handlers.NewBackupHandler(backupService, s3SyncService)
 
 	// Public routes (no auth required)
 	r.Group(func(r chi.Router) {
@@ -137,6 +163,19 @@ func NewRouter(cfg RouterConfig) http.Handler {
 				r.Get("/", tokenHandler.Get)
 				r.Delete("/", tokenHandler.Delete)
 			})
+		})
+
+		// Backup & Restore
+		r.Route("/api/v1/backup", func(r chi.Router) {
+			r.Get("/export", backupHandler.Export)
+			r.Post("/import", backupHandler.Import)
+
+			// S3 operations
+			r.Get("/s3/status", backupHandler.S3Status)
+			r.Post("/s3/sync", backupHandler.S3Sync)
+			r.Get("/s3/list", backupHandler.S3List)
+			r.Post("/s3/restore", backupHandler.S3Restore)
+			r.Delete("/s3/delete", backupHandler.S3Delete)
 		})
 	})
 
