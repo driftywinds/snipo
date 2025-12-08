@@ -1088,6 +1088,32 @@ body {
   flex: 1;
   display: flex;
   overflow: hidden;
+  position: relative;
+}
+
+/* CodeMirror Container */
+.codemirror-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.codemirror-container .CodeMirror {
+  height: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* CodeMirror theme adjustments for dark mode */
+[data-theme="dark"] .CodeMirror {
+  background: var(--editor-bg);
+}
+
+[data-theme="light"] .CodeMirror {
+  background: #fafafa;
 }
 
 /* Tags Sidebar */

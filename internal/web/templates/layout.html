@@ -16,6 +16,10 @@
     <!-- Prism.js theme (local) -->
     <link id="prism-theme" rel="stylesheet" href="/static/vendor/css/prism-tomorrow.min.css">
     
+    <!-- CodeMirror CSS -->
+    <link rel="stylesheet" href="/static/vendor/css/codemirror.min.css">
+    <link id="codemirror-theme" rel="stylesheet" href="/static/vendor/css/codemirror-material-darker.min.css">
+    
     <!-- Fonts (local) -->
     <link rel="stylesheet" href="/static/vendor/css/fonts.css">
     
@@ -33,6 +37,13 @@
                 prismLink.href = theme === 'dark' 
                     ? '/static/vendor/css/prism-tomorrow.min.css'
                     : '/static/vendor/css/prism.min.css';
+            }
+            // Update CodeMirror theme link
+            const cmLink = document.getElementById('codemirror-theme');
+            if (cmLink) {
+                cmLink.href = theme === 'dark'
+                    ? '/static/vendor/css/codemirror-material-darker.min.css'
+                    : '/static/vendor/css/codemirror-eclipse.min.css';
             }
         })();
     </script>
@@ -52,6 +63,24 @@
     
     <!-- Marked.js for markdown rendering (local) -->
     <script src="/static/vendor/js/marked.min.js"></script>
+    
+    <!-- CodeMirror (local) -->
+    <script src="/static/vendor/js/codemirror.min.js"></script>
+    <script src="/static/vendor/js/codemirror-modes/javascript.min.js"></script>
+    <script src="/static/vendor/js/codemirror-modes/python.min.js"></script>
+    <script src="/static/vendor/js/codemirror-modes/go.min.js"></script>
+    <script src="/static/vendor/js/codemirror-modes/shell.min.js"></script>
+    <script src="/static/vendor/js/codemirror-modes/sql.min.js"></script>
+    <script src="/static/vendor/js/codemirror-modes/yaml.min.js"></script>
+    <script src="/static/vendor/js/codemirror-modes/markdown.min.js"></script>
+    <script src="/static/vendor/js/codemirror-modes/xml.min.js"></script>
+    <script src="/static/vendor/js/codemirror-modes/htmlmixed.min.js"></script>
+    <script src="/static/vendor/js/codemirror-modes/css.min.js"></script>
+    <script src="/static/vendor/js/codemirror-modes/clike.min.js"></script>
+    <script src="/static/vendor/js/codemirror-modes/ruby.min.js"></script>
+    <script src="/static/vendor/js/codemirror-modes/php.min.js"></script>
+    <script src="/static/vendor/js/codemirror-modes/swift.min.js"></script>
+    <script src="/static/vendor/js/codemirror-modes/rust.min.js"></script>
     
     <!-- Prism.js (local) -->
     <script src="/static/vendor/js/prism.min.js"></script>

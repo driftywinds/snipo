@@ -584,28 +584,12 @@
                             </button>
                         </div>
                         
-                        <!-- Code editor -->
+                        <!-- Code editor (CodeMirror) -->
                         <div class="code-editor-wrapper">
-                            <!-- Multi-file mode -->
-                            <template x-if="editingSnippet.files && editingSnippet.files.length > 0">
-                                <textarea 
-                                    class="code-textarea"
-                                    :value="activeFile.content"
-                                    @input="updateActiveFileContent($event.target.value)"
-                                    placeholder="Paste your code here..."
-                                    spellcheck="false"
-                                ></textarea>
-                            </template>
-                            <!-- Single-file mode (legacy) -->
-                            <template x-if="!editingSnippet.files || editingSnippet.files.length === 0">
-                                <textarea 
-                                    class="code-textarea"
-                                    x-model="editingSnippet.content"
-                                    placeholder="Paste your code here..."
-                                    spellcheck="false"
-                                    @input="scheduleAutoSave()"
-                                ></textarea>
-                            </template>
+                            <div id="code-editor" 
+                                 x-ref="codeEditor"
+                                 x-init="initCodeMirror()"
+                                 class="codemirror-container"></div>
                         </div>
                     </div>
                     
