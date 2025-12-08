@@ -73,6 +73,12 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	h.render(w, "layout.html", "login.html", data)
 }
 
+// PublicSnippet serves the public snippet view page (no auth required)
+func (h *Handler) PublicSnippet(w http.ResponseWriter, r *http.Request) {
+	data := PageData{Title: "Shared Snippet"}
+	h.render(w, "layout.html", "public.html", data)
+}
+
 // render renders a template with layout
 func (h *Handler) render(w http.ResponseWriter, layout, content string, data interface{}) {
 	// Create a new template that combines layout and content

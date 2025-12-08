@@ -394,6 +394,20 @@ document.addEventListener('alpine:init', () => {
       }
     },
     
+    async copyShareLink(snippet) {
+      if (!snippet?.id || !snippet?.is_public) {
+        showToast('Snippet must be public to share', 'warning');
+        return;
+      }
+      try {
+        const shareUrl = `${window.location.origin}/s/${snippet.id}`;
+        await navigator.clipboard.writeText(shareUrl);
+        showToast('Share link copied to clipboard');
+      } catch (err) {
+        showToast('Failed to copy link', 'error');
+      }
+    },
+    
     formatDate(dateStr) {
       const date = new Date(dateStr);
       const now = new Date();
@@ -693,6 +707,90 @@ document.addEventListener('alpine:init', () => {
       }
       
       this.loading = false;
+    }
+  }));
+  
+  // Public snippet view
+  Alpine.data('publicSnippet', () => ({
+    snippet: null,
+    loading: true,
+    error: false,
+    errorMessage: '',
+    
+    async init() {
+      // Get snippet ID from URL path: /s/{id}
+      const path = window.location.pathname;
+      const match = path.match(/\/s\/([a-zA-Z0-9]+)/);
+      
+      if (!match) {
+        this.error = true;
+        this.errorMessage = 'Invalid snippet URL';
+        this.loading = false;
+        return;
+      }
+      
+      const snippetId = match[1];
+      
+      try {
+        const response = await fetch(`/api/v1/snippets/public/${snippetId}`);
+        const result = await response.json();
+        
+        if (response.ok && result) {
+          this.snippet = result;
+          this.$nextTick(() => {
+            if (typeof Prism !== 'undefined') {
+              Prism.highlightAll();
+            }
+          });
+        } else {
+          this.error = true;
+          this.errorMessage = result.error?.message || 'This snippet is not available or not public';
+        }
+      } catch (err) {
+        this.error = true;
+        this.errorMessage = 'Failed to load snippet';
+      }
+      
+      this.loading = false;
+    },
+    
+    async copyCode() {
+      if (this.snippet?.content) {
+        await navigator.clipboard.writeText(this.snippet.content);
+        showToast('Code copied to clipboard');
+      }
+    },
+    
+    getLanguageColor(lang) {
+      const colors = {
+        javascript: '#f7df1e',
+        typescript: '#3178c6',
+        python: '#3776ab',
+        go: '#00add8',
+        rust: '#dea584',
+        java: '#b07219',
+        csharp: '#239120',
+        cpp: '#f34b7d',
+        ruby: '#cc342d',
+        php: '#777bb4',
+        swift: '#fa7343',
+        kotlin: '#a97bff',
+        html: '#e34c26',
+        css: '#1572b6',
+        sql: '#e38c00',
+        bash: '#4eaa25',
+        json: '#292929',
+        yaml: '#cb171e',
+        markdown: '#083fa1',
+        plaintext: '#6b7280'
+      };
+      return colors[lang] || '#6b7280';
+    },
+    
+    formatDate(dateStr) {
+      if (!dateStr) return '';
+      const date = new Date(dateStr);
+      return date.toLocaleDateString();
     }
   }));
 });

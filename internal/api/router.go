@@ -147,6 +147,7 @@ func NewRouter(cfg RouterConfig) http.Handler {
 		// Web pages
 		r.Get("/", webHandler.Index)
 		r.Get("/login", webHandler.Login)
+		r.Get("/s/{id}", webHandler.PublicSnippet) // Public snippet share page
 	}
 
 	return r

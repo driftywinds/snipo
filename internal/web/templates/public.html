@@ -1,0 +1,192 @@
+{{define "content"}}
+<div class="public-snippet-container" x-data="publicSnippet()">
+    <!-- Loading state -->
+    <div class="public-loading" x-show="loading">
+        <div class="spinner"></div>
+        <p>Loading snippet...</p>
+    </div>
+    
+    <!-- Error state -->
+    <div class="public-error" x-show="error" x-cloak>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="48" height="48">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <h2>Snippet Not Found</h2>
+        <p x-text="errorMessage"></p>
+        <a href="/" class="btn-primary" style="display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; text-decoration: none;">
+            Go to Snipo
+        </a>
+    </div>
+    
+    <!-- Snippet content -->
+    <div class="public-snippet" x-show="!loading && !error" x-cloak>
+        <!-- Header -->
+        <header class="public-header">
+            <div class="public-header-left">
+                <a href="/" class="public-logo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+                        <polyline points="16 18 22 12 16 6"></polyline>
+                        <polyline points="8 6 2 12 8 18"></polyline>
+                    </svg>
+                    <span>Snipo</span>
+                </a>
+            </div>
+            <div class="public-header-right">
+                <button class="btn-icon" @click="copyCode()" title="Copy Code">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                </button>
+                <a href="/" class="btn-primary" style="padding: 0.5rem 1rem; text-decoration: none;">
+                    Open Snipo
+                </a>
+            </div>
+        </header>
+        
+        <!-- Snippet info -->
+        <div class="public-info">
+            <h1 class="public-title" x-text="snippet.title"></h1>
+            <p class="public-description" x-show="snippet.description" x-text="snippet.description"></p>
+            
+            <div class="public-meta">
+                <span class="language-badge" :style="{ background: getLanguageColor(snippet.language) }" x-text="snippet.language"></span>
+                <template x-for="tag in (snippet.tags || [])" :key="tag.id">
+                    <span class="tag-badge" x-text="tag.name"></span>
+                </template>
+                <span class="public-date">
+                    Shared <span x-text="formatDate(snippet.created_at)"></span>
+                </span>
+            </div>
+        </div>
+        
+        <!-- Code -->
+        <div class="public-code">
+            <pre><code :class="'language-' + snippet.language" x-text="snippet.content"></code></pre>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="public-footer">
+            <p>Powered by <a href="/">Snipo</a> - Your personal code snippet manager</p>
+        </footer>
+    </div>
+</div>
+
+<style>
+    .public-snippet-container {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .public-loading, .public-error {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        text-align: center;
+    }
+    
+    .public-error svg {
+        color: var(--snipo-danger);
+        margin-bottom: 1rem;
+    }
+    
+    .public-snippet {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .public-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem 2rem;
+        background: var(--pico-card-background-color);
+        border-bottom: 1px solid var(--pico-muted-border-color);
+    }
+    
+    .public-logo {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 700;
+        font-size: 1.25rem;
+        color: var(--snipo-primary);
+        text-decoration: none;
+    }
+    
+    .public-header-right {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .public-info {
+        padding: 2rem;
+        background: var(--pico-card-background-color);
+        border-bottom: 1px solid var(--pico-muted-border-color);
+    }
+    
+    .public-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0 0 0.5rem 0;
+    }
+    
+    .public-description {
+        color: var(--pico-muted-color);
+        margin: 0 0 1rem 0;
+    }
+    
+    .public-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .public-date {
+        color: var(--pico-muted-color);
+        font-size: 0.85rem;
+        margin-left: auto;
+    }
+    
+    .public-code {
+        flex: 1;
+        overflow: auto;
+        background: var(--editor-bg);
+    }
+    
+    .public-code pre {
+        margin: 0;
+        padding: 1.5rem 2rem;
+        background: transparent !important;
+        font-size: 0.9rem;
+        line-height: 1.6;
+    }
+    
+    .public-code code {
+        background: transparent !important;
+        font-family: var(--font-mono);
+    }
+    
+    .public-footer {
+        padding: 1rem 2rem;
+        text-align: center;
+        background: var(--pico-card-background-color);
+        border-top: 1px solid var(--pico-muted-border-color);
+        font-size: 0.85rem;
+        color: var(--pico-muted-color);
+    }
+    
+    .public-footer a {
+        color: var(--snipo-primary);
+    }
+</style>
+{{end}}
