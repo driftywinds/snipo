@@ -160,6 +160,17 @@ func (r *SnippetRepository) List(ctx context.Context, filter models.SnippetFilte
 	var conditions []string
 	var args []interface{}
 
+	// Fuzzy search on title, description, and content
+	if filter.Query != "" {
+		// Split query into words for fuzzy matching
+		words := strings.Fields(filter.Query)
+		for _, word := range words {
+			fuzzyPattern := "%" + word + "%"
+			conditions = append(conditions, "(s.title LIKE ? OR s.description LIKE ? OR s.content LIKE ?)")
+			args = append(args, fuzzyPattern, fuzzyPattern, fuzzyPattern)
+		}
+	}
+
 	if filter.Language != "" {
 		conditions = append(conditions, "s.language = ?")
 		args = append(args, filter.Language)

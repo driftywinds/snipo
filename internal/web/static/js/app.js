@@ -148,10 +148,9 @@ document.addEventListener('alpine:init', () => {
     showTagModal: false,
     editingFolder: { name: '', parent_id: '' },
     editingTag: { id: null, name: '' },
-    // Draft auto-save
-    hasDraft: false,
-    draftSnippet: null,
-    draftSavedAt: null,
+    // Draft auto-save (supports up to 3 drafts)
+    drafts: [], // Array of { id, snippet, savedAt }
+    showDraftList: false,
     autoSaveTimeout: null,
     
     async init() {
@@ -242,7 +241,7 @@ document.addEventListener('alpine:init', () => {
     },
     
     async loadFavoritesCount() {
-      const result = await api.get('/api/v1/snippets?is_favorite=true&limit=1');
+      const result = await api.get('/api/v1/snippets?favorite=true&limit=1');
       if (result && result.pagination) {
         this.favoritesCount = result.pagination.total;
       }
@@ -454,68 +453,128 @@ document.addEventListener('alpine:init', () => {
       };
     },
     
-    // Draft auto-save functionality
+    // Draft auto-save functionality (supports up to 3 drafts)
     saveDraft() {
       if (!this.isEditing) return;
+      if (!this.editingSnippet.title && !this.editingSnippet.content) return;
+      
+      // Generate a unique draft ID based on snippet ID or timestamp
+      const draftId = this.editingSnippet.id || `new-${Date.now()}`;
+      
+      // Load existing drafts
+      let drafts = this.loadDraftsFromStorage();
+      
+      // Find if this draft already exists
+      const existingIndex = drafts.findIndex(d => d.id === draftId);
       
       const draft = {
-        snippet: this.editingSnippet,
+        id: draftId,
+        snippet: { ...this.editingSnippet },
         savedAt: new Date().toISOString()
       };
-      localStorage.setItem('snipo-draft', JSON.stringify(draft));
+      
+      if (existingIndex >= 0) {
+        // Update existing draft
+        drafts[existingIndex] = draft;
+      } else {
+        // Add new draft, remove oldest if we have 3
+        if (drafts.length >= 3) {
+          drafts.shift(); // Remove oldest
+        }
+        drafts.push(draft);
+      }
+      
+      localStorage.setItem('snipo-drafts', JSON.stringify(drafts));
     },
     
-    loadDraft() {
+    loadDraftsFromStorage() {
       try {
-        const draftJson = localStorage.getItem('snipo-draft');
-        if (!draftJson) return;
+        const draftsJson = localStorage.getItem('snipo-drafts');
+        if (!draftsJson) return [];
         
-        const draft = JSON.parse(draftJson);
-        if (!draft.snippet) return;
-        
-        // Check if draft is less than 24 hours old
-        const savedAt = new Date(draft.savedAt);
+        let drafts = JSON.parse(draftsJson);
         const now = new Date();
-        const hoursDiff = (now - savedAt) / (1000 * 60 * 60);
         
-        if (hoursDiff > 24) {
-          this.clearDraft();
-          return;
-        }
+        // Filter out drafts older than 24 hours
+        drafts = drafts.filter(d => {
+          const savedAt = new Date(d.savedAt);
+          const hoursDiff = (now - savedAt) / (1000 * 60 * 60);
+          return hoursDiff <= 24;
+        });
         
-        // Only restore if we're not already viewing a snippet from URL
-        if (this.showEditor) return;
-        
-        // Show draft recovery prompt
-        if (draft.snippet.content || draft.snippet.title) {
-          this.hasDraft = true;
-          this.draftSnippet = draft.snippet;
-          this.draftSavedAt = savedAt;
-        }
+        return drafts;
       } catch (e) {
-        this.clearDraft();
+        return [];
       }
     },
     
-    restoreDraft() {
-      if (this.draftSnippet) {
-        this.editingSnippet = { ...this.draftSnippet };
+    loadDraft() {
+      const drafts = this.loadDraftsFromStorage();
+      
+      // Only show if we're not already viewing a snippet from URL
+      if (this.showEditor) return;
+      
+      // Filter drafts that have content
+      this.drafts = drafts.filter(d => d.snippet && (d.snippet.content || d.snippet.title));
+      
+      if (this.drafts.length > 0) {
+        this.showDraftList = true;
+      }
+    },
+    
+    restoreDraft(draft) {
+      if (draft && draft.snippet) {
+        this.editingSnippet = { ...draft.snippet };
         this.showEditor = true;
         this.isEditing = true;
-        this.hasDraft = false;
+        this.showDraftList = false;
+        // Remove this draft from storage
+        this.removeDraftById(draft.id);
         showToast('Draft restored');
         this.$nextTick(() => this.highlightAll());
       }
     },
     
-    discardDraft() {
-      this.clearDraft();
-      this.hasDraft = false;
-      this.draftSnippet = null;
+    discardDraft(draft) {
+      this.removeDraftById(draft.id);
+      this.drafts = this.drafts.filter(d => d.id !== draft.id);
+      if (this.drafts.length === 0) {
+        this.showDraftList = false;
+      }
+      showToast('Draft discarded');
+    },
+    
+    discardAllDrafts() {
+      localStorage.removeItem('snipo-drafts');
+      this.drafts = [];
+      this.showDraftList = false;
+      showToast('All drafts discarded');
+    },
+    
+    removeDraftById(draftId) {
+      let drafts = this.loadDraftsFromStorage();
+      drafts = drafts.filter(d => d.id !== draftId);
+      localStorage.setItem('snipo-drafts', JSON.stringify(drafts));
     },
     
     clearDraft() {
-      localStorage.removeItem('snipo-draft');
+      // Clear current editing snippet's draft if it exists
+      if (this.editingSnippet?.id) {
+        this.removeDraftById(this.editingSnippet.id);
+      }
+      // Also clear any "new" drafts that match current content
+      const drafts = this.loadDraftsFromStorage();
+      const newDrafts = drafts.filter(d => !d.id.startsWith('new-'));
+      localStorage.setItem('snipo-drafts', JSON.stringify(newDrafts));
+    },
+    
+    getDraftTitle(draft) {
+      return draft.snippet?.title || 'Untitled';
+    },
+    
+    getDraftPreview(draft) {
+      const content = draft.snippet?.content || '';
+      return content.substring(0, 50) + (content.length > 50 ? '...' : '');
     },
     
     // Auto-save on content change (debounced)

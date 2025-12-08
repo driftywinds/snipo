@@ -40,6 +40,10 @@ func (h *SnippetHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if q := r.URL.Query().Get("q"); q != "" {
+		filter.Query = q
+	}
+
 	if lang := r.URL.Query().Get("language"); lang != "" {
 		filter.Language = lang
 	}

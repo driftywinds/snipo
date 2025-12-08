@@ -2,7 +2,7 @@
 <div class="app-container" x-data="snippetsApp()">
     <!-- Sidebar -->
     <aside class="sidebar" :class="{ 'open': $store.app.sidebarOpen }">
-        <div class="sidebar-header">
+        <div class="sidebar-header" @click="clearFilters()" style="cursor: pointer;" title="Go to Home">
             <svg class="logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="16 18 22 12 16 6"></polyline>
                 <polyline points="8 6 2 12 8 18"></polyline>
@@ -221,8 +221,8 @@
             </div>
         </header>
         
-        <!-- Draft recovery banner -->
-        <div class="draft-banner" x-show="hasDraft" x-cloak>
+        <!-- Draft recovery banner (supports multiple drafts) -->
+        <div class="draft-banner" x-show="showDraftList && drafts.length > 0" x-cloak>
             <div class="draft-banner-content">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -230,11 +230,24 @@
                     <line x1="16" y1="13" x2="8" y2="13"></line>
                     <line x1="16" y1="17" x2="8" y2="17"></line>
                 </svg>
-                <span>You have an unsaved draft from <span x-text="draftSavedAt ? new Date(draftSavedAt).toLocaleString() : ''"></span></span>
+                <span>You have <span x-text="drafts.length"></span> unsaved draft<span x-show="drafts.length > 1">s</span></span>
             </div>
-            <div class="draft-banner-actions">
-                <button class="btn-secondary" @click="discardDraft()">Discard</button>
-                <button class="btn-primary" @click="restoreDraft()">Restore Draft</button>
+            <div class="draft-list">
+                <template x-for="draft in drafts" :key="draft.id">
+                    <div class="draft-item">
+                        <div class="draft-item-info">
+                            <span class="draft-item-title" x-text="getDraftTitle(draft)"></span>
+                            <span class="draft-item-time" x-text="new Date(draft.savedAt).toLocaleString()"></span>
+                        </div>
+                        <div class="draft-item-actions">
+                            <button class="btn-secondary btn-sm" @click="discardDraft(draft)">Discard</button>
+                            <button class="btn-primary btn-sm" @click="restoreDraft(draft)">Restore</button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            <div class="draft-banner-actions" x-show="drafts.length > 1">
+                <button class="btn-secondary" @click="discardAllDrafts()">Discard All</button>
             </div>
         </div>
         

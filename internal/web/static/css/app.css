@@ -372,13 +372,11 @@ body {
 /* Draft recovery banner */
 .draft-banner {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   padding: 0.75rem 1.5rem;
   background: var(--snipo-warning-bg, #fef3c7);
   border-bottom: 1px solid var(--snipo-warning-border, #f59e0b);
-  gap: 1rem;
-  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 [data-theme="dark"] .draft-banner {
@@ -402,9 +400,62 @@ body {
   flex-shrink: 0;
 }
 
+.draft-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.draft-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 0.375rem;
+  gap: 1rem;
+}
+
+[data-theme="dark"] .draft-item {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.draft-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.draft-item-title {
+  font-weight: 500;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.draft-item-time {
+  font-size: 0.75rem;
+  color: var(--pico-muted-color);
+}
+
+.draft-item-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.btn-sm {
+  padding: 0.25rem 0.5rem !important;
+  font-size: 0.75rem !important;
+}
+
 .draft-banner-actions {
   display: flex;
   gap: 0.5rem;
+  justify-content: flex-end;
 }
 
 .draft-banner-actions button {
