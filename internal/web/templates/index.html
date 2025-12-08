@@ -2,13 +2,13 @@
 <div class="app-container" x-data="snippetsApp()">
     <!-- Sidebar -->
     <aside class="sidebar" :class="{ 'open': $store.app.sidebarOpen }">
-        <div class="sidebar-header" @click="clearFilters()" style="cursor: pointer;" title="Go to Home">
+        <a href="/" class="sidebar-header" title="Go to Home">
             <svg class="logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="16 18 22 12 16 6"></polyline>
                 <polyline points="8 6 2 12 8 18"></polyline>
             </svg>
             <h1>Snipo</h1>
-        </div>
+        </a>
         
         <nav class="sidebar-nav">
             <!-- Quick actions -->
