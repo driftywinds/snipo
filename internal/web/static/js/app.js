@@ -24,9 +24,9 @@ const theme = {
     const prismLink = document.getElementById('prism-theme');
     if (prismLink) {
       if (themeName === 'dark') {
-        prismLink.href = 'https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css';
+        prismLink.href = '/static/vendor/css/prism-tomorrow.min.css';
       } else {
-        prismLink.href = 'https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css';
+        prismLink.href = '/static/vendor/css/prism.min.css';
       }
     }
   }

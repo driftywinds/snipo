@@ -5,20 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Title}} - Snipo</title>
     
-    <!-- Pico CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <!-- Pico CSS (local) -->
+    <link rel="stylesheet" href="/static/vendor/css/pico.min.css">
     
-    <!-- Prism.js for syntax highlighting (id for dynamic switching) -->
-    <link id="prism-theme" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css">
+    <!-- Prism.js theme (local) -->
+    <link id="prism-theme" rel="stylesheet" href="/static/vendor/css/prism-tomorrow.min.css">
+    
+    <!-- Fonts (local) -->
+    <link rel="stylesheet" href="/static/vendor/css/fonts.css">
     
     <!-- Custom styles -->
     <link rel="stylesheet" href="/static/css/app.css">
-    
-    <!-- Fonts: Noto Sans for text, Fira Code for code -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/firacode@6.2.0/distr/fira_code.css">
     
     <!-- Initialize theme before page renders to prevent flash -->
     <script>
@@ -29,8 +26,8 @@
             const prismLink = document.getElementById('prism-theme');
             if (prismLink) {
                 prismLink.href = theme === 'dark' 
-                    ? 'https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css'
-                    : 'https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css';
+                    ? '/static/vendor/css/prism-tomorrow.min.css'
+                    : '/static/vendor/css/prism.min.css';
             }
         })();
     </script>
@@ -41,23 +38,23 @@
     <!-- Toast container -->
     <div id="toast-container" class="toast-container"></div>
     
-    <!-- Alpine.js with collapse plugin -->
-    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Alpine.js with collapse plugin (local) -->
+    <script defer src="/static/vendor/js/alpine-collapse.min.js"></script>
+    <script defer src="/static/vendor/js/alpine.min.js"></script>
     
-    <!-- htmx -->
-    <script src="https://cdn.jsdelivr.net/npm/htmx.org@1.9.10/dist/htmx.min.js"></script>
+    <!-- htmx (local) -->
+    <script src="/static/vendor/js/htmx.min.js"></script>
     
-    <!-- Prism.js -->
-    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/prism.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-javascript.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-go.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-json.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-yaml.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-sql.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-markdown.min.js"></script>
+    <!-- Prism.js (local) -->
+    <script src="/static/vendor/js/prism.min.js"></script>
+    <script src="/static/vendor/js/prism-javascript.min.js"></script>
+    <script src="/static/vendor/js/prism-python.min.js"></script>
+    <script src="/static/vendor/js/prism-go.min.js"></script>
+    <script src="/static/vendor/js/prism-bash.min.js"></script>
+    <script src="/static/vendor/js/prism-json.min.js"></script>
+    <script src="/static/vendor/js/prism-yaml.min.js"></script>
+    <script src="/static/vendor/js/prism-sql.min.js"></script>
+    <script src="/static/vendor/js/prism-markdown.min.js"></script>
     
     <!-- App JS -->
     <script src="/static/js/app.js"></script>

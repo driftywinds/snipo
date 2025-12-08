@@ -29,10 +29,10 @@ func SecurityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("X-XSS-Protection", "1; mode=block")
 
-		// Content Security Policy
+		// Content Security Policy - all resources served locally
 		w.Header().Set("Content-Security-Policy", strings.Join([]string{
 			"default-src 'self'",
-			"script-src 'self' 'unsafe-inline'",
+			"script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval needed for Alpine.js
 			"style-src 'self' 'unsafe-inline'",
 			"img-src 'self' data: blob:",
 			"font-src 'self'",
