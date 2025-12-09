@@ -322,6 +322,7 @@ document.addEventListener('alpine:init', () => {
         'java': 'ace/mode/java',
         'csharp': 'ace/mode/csharp',
         'cpp': 'ace/mode/c_cpp',
+        'cuda': 'ace/mode/cuda',
         'ruby': 'ace/mode/ruby',
         'php': 'ace/mode/php',
         'swift': 'ace/mode/swift',
@@ -938,6 +939,7 @@ document.addEventListener('alpine:init', () => {
       const langMap = {
         'js': 'javascript', 'ts': 'typescript', 'py': 'python', 'go': 'go',
         'rs': 'rust', 'java': 'java', 'cs': 'csharp', 'cpp': 'cpp', 'c': 'cpp',
+        'cu': 'cuda', 'cuh': 'cuda',
         'rb': 'ruby', 'php': 'php', 'swift': 'swift', 'kt': 'kotlin',
         'html': 'html', 'css': 'css', 'sql': 'sql', 'sh': 'bash',
         'json': 'json', 'yaml': 'yaml', 'yml': 'yaml', 'md': 'markdown',
@@ -1029,7 +1031,7 @@ document.addEventListener('alpine:init', () => {
     getFileExtension(language) {
       const extMap = {
         'javascript': 'js', 'typescript': 'ts', 'python': 'py', 'go': 'go',
-        'rust': 'rs', 'java': 'java', 'csharp': 'cs', 'cpp': 'cpp',
+        'rust': 'rs', 'java': 'java', 'csharp': 'cs', 'cpp': 'cpp', 'cuda': 'cu',
         'ruby': 'rb', 'php': 'php', 'swift': 'swift', 'kotlin': 'kt',
         'html': 'html', 'css': 'css', 'sql': 'sql', 'bash': 'sh',
         'json': 'json', 'yaml': 'yaml', 'markdown': 'md', 'plaintext': 'txt'
@@ -1060,6 +1062,7 @@ document.addEventListener('alpine:init', () => {
         java: '#b07219',
         csharp: '#178600',
         cpp: '#f34b7d',
+        cuda: '#76b900',
         ruby: '#cc342d',
         php: '#4f5d95',
         swift: '#fa7343',
@@ -1593,6 +1596,7 @@ document.addEventListener('alpine:init', () => {
         java: '#b07219',
         csharp: '#239120',
         cpp: '#f34b7d',
+        cuda: '#76b900',
         ruby: '#cc342d',
         php: '#777bb4',
         swift: '#fa7343',
