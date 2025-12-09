@@ -126,12 +126,17 @@ document.addEventListener('alpine:init', () => {
       title: '',
       description: '',
       content: '',
-      language: 'javascript',
+      language: 'plaintext',
       tags: [],
       folder_id: null,
       is_public: false,
       is_favorite: false,
-      files: [] // Multi-file support
+      files: [{
+        id: 0,
+        filename: 'snippet.txt',
+        content: '',
+        language: 'plaintext'
+      }]
     },
     activeFileIndex: 0, // Currently active file tab
     filter: {
@@ -525,16 +530,16 @@ document.addEventListener('alpine:init', () => {
         title: '',
         description: '',
         content: '',
-        language: 'javascript',
+        language: 'plaintext',
         tags: [],
         folder_id: null,
         is_public: false,
         is_favorite: false,
         files: [{
           id: 0,
-          filename: 'main.js',
+          filename: 'snippet.txt',
           content: '',
-          language: 'javascript'
+          language: 'plaintext'
         }]
       };
       this.activeFileIndex = 0;
@@ -685,16 +690,16 @@ document.addEventListener('alpine:init', () => {
         title: '',
         description: '',
         content: '',
-        language: 'javascript',
+        language: 'plaintext',
         tags: [],
         folder_id: null,
         is_public: false,
         is_favorite: false,
         files: [{
           id: 0,
-          filename: 'main.js',
+          filename: 'snippet.txt',
           content: '',
-          language: 'javascript'
+          language: 'plaintext'
         }]
       };
       this.activeFileIndex = 0;
