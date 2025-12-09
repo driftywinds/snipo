@@ -10,6 +10,8 @@ const theme = {
     document.documentElement.setAttribute('data-theme', value);
     // Update Prism theme
     this.updatePrismTheme(value);
+    // Update Ace editor theme
+    this.updateAceTheme(value);
   },
   toggle() {
     const current = this.get();
@@ -28,6 +30,19 @@ const theme = {
       } else {
         prismLink.href = '/static/vendor/css/prism.min.css';
       }
+    }
+  },
+  updateAceTheme(themeName) {
+    // Find the Ace editor instance and update its theme
+    if (typeof ace !== 'undefined') {
+      const editors = document.querySelectorAll('.ace_editor');
+      editors.forEach(editorEl => {
+        const editor = ace.edit(editorEl);
+        if (editor) {
+          const aceTheme = themeName === 'dark' ? 'ace/theme/monokai' : 'ace/theme/chrome';
+          editor.setTheme(aceTheme);
+        }
+      });
     }
   }
 };
