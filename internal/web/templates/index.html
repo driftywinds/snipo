@@ -554,6 +554,11 @@
             <div class="edit-mode" x-show="isEditing">
                 <!-- Compact metadata bar -->
                 <div class="editor-metadata">
+                    <div class="editor-field-inline description-field">
+                        <textarea x-model="editingSnippet.description" placeholder="Description (optional)" rows="1"
+                            class="description-textarea" @input="autoResizeTextarea($event.target)"></textarea>
+                    </div>
+
                     <div class="editor-field-inline compact">
                         <select :value="activeFile?.language || editingSnippet.language"
                             @change="updateActiveFileLanguage($event.target.value)" title="Language">
@@ -598,11 +603,6 @@
                         <span>Public</span>
                     </label>
 
-                    <div class="editor-field-inline description-field">
-                        <textarea x-model="editingSnippet.description" placeholder="Description (optional)" rows="1"
-                            class="description-textarea" @input="autoResizeTextarea($event.target)"></textarea>
-                    </div>
-                    <!-- Toggle Focus Mode -->
                     <button class="btn-icon btn-focus" :class="{ 'active': !editorHeaderVisible }"
                         @click="editorHeaderVisible = !editorHeaderVisible" title="Focus Mode (Toggle Header)"
                         style="margin-left: auto;">
