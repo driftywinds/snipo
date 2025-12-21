@@ -52,6 +52,11 @@ func (h *SnippetHandler) List(w http.ResponseWriter, r *http.Request) {
 		filter.IsFavorite = &isFav
 	}
 
+	if archived := r.URL.Query().Get("is_archived"); archived != "" {
+		isArchived := archived == "true" || archived == "1"
+		filter.IsArchived = &isArchived
+	}
+
 	if tagID := r.URL.Query().Get("tag_id"); tagID != "" {
 		if id, err := strconv.ParseInt(tagID, 10, 64); err == nil && id > 0 {
 			filter.TagID = id
@@ -195,6 +200,27 @@ func (h *SnippetHandler) ToggleFavorite(w http.ResponseWriter, r *http.Request) 
 	}
 
 	snippet, err := h.service.ToggleFavorite(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, services.ErrSnippetNotFound) {
+			NotFound(w, "Snippet not found")
+			return
+		}
+		InternalError(w)
+		return
+	}
+
+	OK(w, snippet)
+}
+
+// ToggleArchive handles POST /api/v1/snippets/{id}/archive
+func (h *SnippetHandler) ToggleArchive(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		Error(w, http.StatusBadRequest, "MISSING_ID", "Snippet ID is required")
+		return
+	}
+
+	snippet, err := h.service.ToggleArchive(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, services.ErrSnippetNotFound) {
 			NotFound(w, "Snippet not found")

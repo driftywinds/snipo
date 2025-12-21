@@ -6,7 +6,7 @@ A lightweight, self-hosted snippet manager designed for single-user deployments.
 
 [![CI](https://github.com/MohamedElashri/snipo/actions/workflows/ci.yml/badge.svg)](https://github.com/MohamedElashri/snipo/actions/workflows/ci.yml)
 [![Release](https://github.com/MohamedElashri/snipo/actions/workflows/release.yml/badge.svg)](https://github.com/MohamedElashri/snipo/actions/workflows/release.yml)
-[![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![GitHub release](https://img.shields.io/github/v/release/MohamedElashri/snipo?include_prereleases)](https://github.com/MohamedElashri/snipo/releases)
 

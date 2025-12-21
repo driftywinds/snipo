@@ -25,6 +25,7 @@ type Snippet struct {
 	Language    string    `json:"language"` // Primary/legacy language
 	IsFavorite  bool      `json:"is_favorite"`
 	IsPublic    bool      `json:"is_public"`
+	IsArchived  bool      `json:"is_archived"`
 	ViewCount   int       `json:"view_count"`
 	S3Key       *string   `json:"s3_key,omitempty"`
 	Checksum    *string   `json:"checksum,omitempty"`
@@ -54,6 +55,7 @@ type SnippetInput struct {
 	Tags        []string           `json:"tags,omitempty"`
 	FolderID    *int64             `json:"folder_id,omitempty"`
 	IsPublic    bool               `json:"is_public"`
+	IsArchived  bool               `json:"is_archived,omitempty"`
 	Files       []SnippetFileInput `json:"files,omitempty"` // Multi-file support
 }
 
@@ -65,6 +67,7 @@ type SnippetFilter struct {
 	FolderID   int64
 	IsFavorite *bool
 	IsPublic   *bool
+	IsArchived *bool
 	Page       int
 	Limit      int
 	SortBy     string
