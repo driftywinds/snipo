@@ -555,11 +555,13 @@
                 <!-- Compact metadata bar -->
                 <div class="editor-metadata">
                     <div class="editor-field-inline description-field">
+                        <span class="editor-label">Description</span>
                         <textarea x-model="editingSnippet.description" placeholder="Description (optional)" rows="1"
                             class="description-textarea" @input="autoResizeTextarea($event.target)"></textarea>
                     </div>
 
                     <div class="editor-field-inline compact">
+                        <span class="editor-label">Language</span>
                         <select :value="activeFile?.language || editingSnippet.language"
                             @change="updateActiveFileLanguage($event.target.value); $nextTick(() => autoResizeSelect($event.target))"
                             x-init="$watch('activeFile?.language || editingSnippet.language', () => $nextTick(() => autoResizeSelect($el))); $nextTick(() => autoResizeSelect($el))"
@@ -589,6 +591,7 @@
                     </div>
 
                     <div class="editor-field-inline compact">
+                        <span class="editor-label">Folder</span>
                         <select x-model="editingSnippet.folder_id" title="Folder">
                             <option value="">No folder</option>
                             <template x-for="folder in flattenedFolders" :key="folder.id">

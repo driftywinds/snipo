@@ -1425,9 +1425,19 @@ body {
 
 /* Description field */
 .description-field {
-  flex: 1;
+  flex: 0 0 50%;
   margin-left: 0.5rem;
   min-width: 120px;
+}
+
+.editor-label {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--pico-muted-color);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  margin-right: 0.4rem;
 }
 
 .description-textarea {
