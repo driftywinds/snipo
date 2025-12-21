@@ -1618,6 +1618,13 @@ document.addEventListener('alpine:init', () => {
       if (!dateStr) return '';
       const date = new Date(dateStr);
       return date.toLocaleDateString();
+    },
+
+    autoResizeInput(element) {
+      if (!element) return;
+      const val = element.value || element.placeholder || '';
+      const length = val.length;
+      element.style.width = Math.max(15, length + 2) + 'ch';
     }
   }));
 });

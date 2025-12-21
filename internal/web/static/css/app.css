@@ -663,14 +663,33 @@ body {
   border-bottom: 1px solid var(--pico-muted-border-color);
 }
 
-.editor-title-input {
+.editor-title-wrapper {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.editor-title-input {
+  width: 100%;
   font-size: 0.9rem;
   font-weight: 600;
-  border: none;
+  border: 2px solid var(--pico-muted-border-color);
+  /* Bold clear border */
+  border-radius: 0.25rem;
   background: transparent;
-  padding: 0.2rem 0;
+  padding: 0.4rem 0.5rem;
+  /* Added padding for better visual inside border */
   margin: 0;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.6;
+  min-height: 24px;
+}
+
+.editor-title-input:focus {
+  border-color: var(--snipo-primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
 }
 
 .editor-title-input.bordered {

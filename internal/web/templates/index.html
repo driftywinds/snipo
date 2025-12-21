@@ -402,9 +402,12 @@
                 <!-- Preview mode: show title as text -->
                 <h2 class="editor-title-display" x-show="!isEditing" x-text="editingSnippet.title || 'Untitled'"></h2>
 
-                <!-- Edit mode: show title input -->
-                <input x-show="isEditing" type="text" class="editor-title-input bordered" x-model="editingSnippet.title"
-                    placeholder="Snippet title..." @input="scheduleAutoSave()">
+                <!-- Edit mode: show title input (as textarea for dynamic resize) -->
+                <div class="editor-title-wrapper" x-show="isEditing">
+                    <textarea class="editor-title-input" x-model="editingSnippet.title" placeholder="Snippet title..."
+                        rows="1" @input="scheduleAutoSave(); autoResizeTextarea($event.target)"
+                        x-init="$watch('isEditing', (v) => { if(v) $nextTick(() => autoResizeTextarea($el)) })"></textarea>
+                </div>
 
                 <div class="flex gap-2">
                     <button class="btn-action" @click="toggleFavorite(editingSnippet)" x-show="editingSnippet?.id"
