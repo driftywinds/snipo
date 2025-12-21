@@ -619,6 +619,20 @@ document.addEventListener('alpine:init', () => {
       });
     },
 
+    cancelEditing() {
+      // Switch back to preview mode without saving
+      this.isEditing = false;
+      if (this.editingSnippet?.id) {
+        // Reload the snippet to discard changes
+        this.viewSnippet(this.editingSnippet);
+      } else {
+        // If it's a new snippet, close the editor
+        this.showEditor = false;
+        this.editingSnippet = null;
+        this.updateUrl({ snippet: null, edit: null });
+      }
+    },
+
     async editSnippet(snippet) {
       const result = await api.get(`/api/v1/snippets/${snippet.id}`);
       if (result) {
