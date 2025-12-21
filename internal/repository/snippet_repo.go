@@ -22,10 +22,10 @@ func NewSnippetRepository(db *sql.DB) *SnippetRepository {
 // Create inserts a new snippet
 func (r *SnippetRepository) Create(ctx context.Context, input *models.SnippetInput) (*models.Snippet, error) {
 	query := `
-		INSERT INTO snippets (title, description, content, language, is_public)
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO snippets (title, description, content, language, is_public, is_archived)
+		VALUES (?, ?, ?, ?, ?, ?)
 		RETURNING id, title, description, content, language, is_favorite, is_public, 
-		          view_count, s3_key, checksum, created_at, updated_at
+		          view_count, s3_key, checksum, is_archived, created_at, updated_at
 	`
 
 	snippet := &models.Snippet{}
@@ -35,6 +35,7 @@ func (r *SnippetRepository) Create(ctx context.Context, input *models.SnippetInp
 		input.Content,
 		input.Language,
 		input.IsPublic,
+		input.IsArchived,
 	).Scan(
 		&snippet.ID,
 		&snippet.Title,
@@ -46,6 +47,7 @@ func (r *SnippetRepository) Create(ctx context.Context, input *models.SnippetInp
 		&snippet.ViewCount,
 		&snippet.S3Key,
 		&snippet.Checksum,
+		&snippet.IsArchived,
 		&snippet.CreatedAt,
 		&snippet.UpdatedAt,
 	)
@@ -61,7 +63,7 @@ func (r *SnippetRepository) Create(ctx context.Context, input *models.SnippetInp
 func (r *SnippetRepository) GetByID(ctx context.Context, id string) (*models.Snippet, error) {
 	query := `
 		SELECT id, title, description, content, language, is_favorite, is_public,
-		       view_count, s3_key, checksum, created_at, updated_at
+		       view_count, s3_key, checksum, is_archived, created_at, updated_at
 		FROM snippets
 		WHERE id = ?
 	`
@@ -78,6 +80,7 @@ func (r *SnippetRepository) GetByID(ctx context.Context, id string) (*models.Sni
 		&snippet.ViewCount,
 		&snippet.S3Key,
 		&snippet.Checksum,
+		&snippet.IsArchived,
 		&snippet.CreatedAt,
 		&snippet.UpdatedAt,
 	)
@@ -96,10 +99,10 @@ func (r *SnippetRepository) GetByID(ctx context.Context, id string) (*models.Sni
 func (r *SnippetRepository) Update(ctx context.Context, id string, input *models.SnippetInput) (*models.Snippet, error) {
 	query := `
 		UPDATE snippets
-		SET title = ?, description = ?, content = ?, language = ?, is_public = ?, updated_at = CURRENT_TIMESTAMP
+		SET title = ?, description = ?, content = ?, language = ?, is_public = ?, is_archived = ?, updated_at = CURRENT_TIMESTAMP
 		WHERE id = ?
 		RETURNING id, title, description, content, language, is_favorite, is_public,
-		          view_count, s3_key, checksum, created_at, updated_at
+		          view_count, s3_key, checksum, is_archived, created_at, updated_at
 	`
 
 	snippet := &models.Snippet{}
@@ -109,6 +112,7 @@ func (r *SnippetRepository) Update(ctx context.Context, id string, input *models
 		input.Content,
 		input.Language,
 		input.IsPublic,
+		input.IsArchived,
 		id,
 	).Scan(
 		&snippet.ID,
@@ -121,6 +125,7 @@ func (r *SnippetRepository) Update(ctx context.Context, id string, input *models
 		&snippet.ViewCount,
 		&snippet.S3Key,
 		&snippet.Checksum,
+		&snippet.IsArchived,
 		&snippet.CreatedAt,
 		&snippet.UpdatedAt,
 	)
@@ -173,6 +178,13 @@ func (r *SnippetRepository) Delete(ctx context.Context, id string) error {
 
 // List retrieves snippets with filtering and pagination
 func (r *SnippetRepository) List(ctx context.Context, filter models.SnippetFilter) (*models.SnippetListResponse, error) {
+	if filter.Limit <= 0 {
+		filter.Limit = 20
+	}
+	if filter.Page <= 0 {
+		filter.Page = 1
+	}
+
 	// Build query
 	var conditions []string
 	var args []interface{}
@@ -209,6 +221,18 @@ func (r *SnippetRepository) List(ctx context.Context, filter models.SnippetFilte
 		} else {
 			args = append(args, 0)
 		}
+	}
+
+	if filter.IsArchived != nil {
+		conditions = append(conditions, "s.is_archived = ?")
+		if *filter.IsArchived {
+			args = append(args, 1)
+		} else {
+			args = append(args, 0)
+		}
+	} else {
+		// Default: hide archived
+		conditions = append(conditions, "s.is_archived = 0")
 	}
 
 	// Filter by tag
@@ -257,7 +281,7 @@ func (r *SnippetRepository) List(ctx context.Context, filter models.SnippetFilte
 	// Build main query
 	query := fmt.Sprintf(`
 		SELECT s.id, s.title, s.description, s.content, s.language, s.is_favorite, s.is_public,
-		       s.view_count, s.s3_key, s.checksum, s.created_at, s.updated_at
+		       s.view_count, s.s3_key, s.checksum, s.is_archived, s.created_at, s.updated_at
 		FROM snippets s
 		%s
 		ORDER BY s.%s %s
@@ -286,6 +310,7 @@ func (r *SnippetRepository) List(ctx context.Context, filter models.SnippetFilte
 			&s.ViewCount,
 			&s.S3Key,
 			&s.Checksum,
+			&s.IsArchived,
 			&s.CreatedAt,
 			&s.UpdatedAt,
 		); err != nil {
@@ -322,7 +347,7 @@ func (r *SnippetRepository) ToggleFavorite(ctx context.Context, id string) (*mod
 		SET is_favorite = NOT is_favorite
 		WHERE id = ?
 		RETURNING id, title, description, content, language, is_favorite, is_public,
-		          view_count, s3_key, checksum, created_at, updated_at
+		          view_count, s3_key, checksum, is_archived, created_at, updated_at
 	`
 
 	snippet := &models.Snippet{}
@@ -337,6 +362,7 @@ func (r *SnippetRepository) ToggleFavorite(ctx context.Context, id string) (*mod
 		&snippet.ViewCount,
 		&snippet.S3Key,
 		&snippet.Checksum,
+		&snippet.IsArchived,
 		&snippet.CreatedAt,
 		&snippet.UpdatedAt,
 	)
@@ -346,6 +372,45 @@ func (r *SnippetRepository) ToggleFavorite(ctx context.Context, id string) (*mod
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to toggle favorite: %w", err)
+	}
+
+	return snippet, nil
+}
+
+// ToggleArchive toggles the archive status of a snippet
+func (r *SnippetRepository) ToggleArchive(ctx context.Context, id string) (*models.Snippet, error) {
+	query := `
+		UPDATE snippets
+		SET is_archived = NOT is_archived,
+		    is_public = CASE WHEN (NOT is_archived) = 1 THEN 0 ELSE is_public END,
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE id = ?
+		RETURNING id, title, description, content, language, is_favorite, is_public,
+		          view_count, s3_key, checksum, is_archived, created_at, updated_at
+	`
+
+	snippet := &models.Snippet{}
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
+		&snippet.ID,
+		&snippet.Title,
+		&snippet.Description,
+		&snippet.Content,
+		&snippet.Language,
+		&snippet.IsFavorite,
+		&snippet.IsPublic,
+		&snippet.ViewCount,
+		&snippet.S3Key,
+		&snippet.Checksum,
+		&snippet.IsArchived,
+		&snippet.CreatedAt,
+		&snippet.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to toggle archive: %w", err)
 	}
 
 	return snippet, nil
@@ -368,7 +433,7 @@ func (r *SnippetRepository) Search(ctx context.Context, query string, limit int)
 
 	sqlQuery := `
 		SELECT s.id, s.title, s.description, s.content, s.language, s.is_favorite, s.is_public,
-		       s.view_count, s.s3_key, s.checksum, s.created_at, s.updated_at
+		       s.view_count, s.s3_key, s.checksum, s.is_archived, s.created_at, s.updated_at
 		FROM snippets s
 		WHERE s.rowid IN (
 			SELECT rowid FROM snippets_fts WHERE snippets_fts MATCH ?
@@ -396,6 +461,7 @@ func (r *SnippetRepository) Search(ctx context.Context, query string, limit int)
 			&s.ViewCount,
 			&s.S3Key,
 			&s.Checksum,
+			&s.IsArchived,
 			&s.CreatedAt,
 			&s.UpdatedAt,
 		); err != nil {

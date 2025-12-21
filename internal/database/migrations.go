@@ -175,10 +175,23 @@ CREATE TABLE IF NOT EXISTS snippet_files (
 CREATE INDEX IF NOT EXISTS idx_snippet_files_snippet ON snippet_files(snippet_id);
 `
 
+// Migration 3: Add archiving support
+const addArchivingSQL = `
+-- Add is_archived column to snippets
+ALTER TABLE snippets ADD COLUMN is_archived INTEGER DEFAULT 0;
+
+-- Create index for archived snippets
+CREATE INDEX IF NOT EXISTS idx_snippets_archived ON snippets(is_archived);
+
+-- Add archive_enabled column to settings
+ALTER TABLE settings ADD COLUMN archive_enabled INTEGER DEFAULT 0;
+`
+
 // getMigrations returns all available migrations in order
 func getMigrations() []Migration {
 	return []Migration{
 		{Version: 1, Name: "initial_schema", SQL: initialSchemaSQL},
 		{Version: 2, Name: "add_snippet_files", SQL: addSnippetFilesSQL},
+		{Version: 3, Name: "add_archiving", SQL: addArchivingSQL},
 	}
 }

@@ -108,6 +108,28 @@ func (db *DB) Migrate(ctx context.Context) error {
 
 		db.logger.Info("applying migration", "version", m.Version, "name", m.Name)
 
+		// Special handling for migration 3 (idempotency fix)
+		if m.Version == 3 {
+			// Check if is_archived already exists in snippets
+			var count int
+			err := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM pragma_table_info('snippets') WHERE name='is_archived'").Scan(&count)
+			if err == nil && count > 0 {
+				db.logger.Warn("column is_archived already exists, modifying migration 3 to skip it")
+				// Reconstruct migration to only run what might be missing
+				m.SQL = ""
+				
+				// Check index (safe to retry with IF NOT EXISTS, so adding it)
+				m.SQL += "CREATE INDEX IF NOT EXISTS idx_snippets_archived ON snippets(is_archived);\n"
+
+				// Check settings column
+				var settingsCount int
+				err := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM pragma_table_info('settings') WHERE name='archive_enabled'").Scan(&settingsCount)
+				if err == nil && settingsCount == 0 {
+					m.SQL += "ALTER TABLE settings ADD COLUMN archive_enabled INTEGER DEFAULT 0;\n"
+				}
+			}
+		}
+
 		// Execute migration in a transaction
 		tx, err := db.BeginTx(ctx, nil)
 		if err != nil {

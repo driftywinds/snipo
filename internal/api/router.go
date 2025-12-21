@@ -49,6 +49,7 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	folderRepo := repository.NewFolderRepository(cfg.DB)
 	tokenRepo := repository.NewTokenRepository(cfg.DB)
 	fileRepo := repository.NewSnippetFileRepository(cfg.DB)
+	settingsRepo := repository.NewSettingsRepository(cfg.DB)
 
 	// Create services
 	snippetService := services.NewSnippetService(snippetRepo, cfg.Logger).
@@ -87,6 +88,7 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	authHandler := handlers.NewAuthHandler(cfg.AuthService)
 	healthHandler := handlers.NewHealthHandler(cfg.DB, cfg.Version, cfg.Commit)
 	backupHandler := handlers.NewBackupHandler(backupService, s3SyncService)
+	settingsHandler := handlers.NewSettingsHandler(settingsRepo)
 
 	// Public routes (no auth required)
 	r.Group(func(r chi.Router) {
@@ -114,6 +116,12 @@ func NewRouter(cfg RouterConfig) http.Handler {
 		// Auth management (protected)
 		r.Post("/api/v1/auth/change-password", authHandler.ChangePassword)
 
+		// Settings management
+		r.Route("/api/v1/settings", func(r chi.Router) {
+			r.Get("/", settingsHandler.Get)
+			r.Put("/", settingsHandler.Update)
+		})
+
 		// Snippet CRUD
 		r.Route("/api/v1/snippets", func(r chi.Router) {
 			r.Get("/", snippetHandler.List)
@@ -125,6 +133,7 @@ func NewRouter(cfg RouterConfig) http.Handler {
 				r.Put("/", snippetHandler.Update)
 				r.Delete("/", snippetHandler.Delete)
 				r.Post("/favorite", snippetHandler.ToggleFavorite)
+				r.Post("/archive", snippetHandler.ToggleArchive)
 				r.Post("/duplicate", snippetHandler.Duplicate)
 			})
 		})

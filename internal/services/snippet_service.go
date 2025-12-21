@@ -286,6 +286,22 @@ func (s *SnippetService) ToggleFavorite(ctx context.Context, id string) (*models
 	return snippet, nil
 }
 
+// ToggleArchive toggles the archive status of a snippet
+func (s *SnippetService) ToggleArchive(ctx context.Context, id string) (*models.Snippet, error) {
+	snippet, err := s.repo.ToggleArchive(ctx, id)
+	if err != nil {
+		s.logger.Error("failed to toggle archive", "id", id, "error", err)
+		return nil, err
+	}
+
+	if snippet == nil {
+		return nil, ErrSnippetNotFound
+	}
+
+	s.logger.Info("snippet archive toggled", "id", id, "is_archived", snippet.IsArchived)
+	return snippet, nil
+}
+
 // Search performs full-text search on snippets
 func (s *SnippetService) Search(ctx context.Context, query string, limit int) ([]models.Snippet, error) {
 	if query == "" {

@@ -439,12 +439,110 @@ func TestSnippetRepository_IncrementViewCount(t *testing.T) {
 		t.Fatalf("IncrementViewCount failed: %v", err)
 	}
 
-	// Verify
-	snippet, err := repo.GetByID(ctx, created.ID)
+	// Verify view count
+	updated, err := repo.GetByID(ctx, created.ID)
 	if err != nil {
 		t.Fatalf("GetByID failed: %v", err)
 	}
-	if snippet.ViewCount != 1 {
-		t.Errorf("expected view_count 1, got %d", snippet.ViewCount)
+	if updated.ViewCount != 1 {
+		t.Errorf("expected view_count 1, got %d", updated.ViewCount)
+	}
+}
+
+func TestSnippetRepository_ToggleArchive(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewSnippetRepository(db)
+	ctx := testutil.TestContext()
+
+	// Create a snippet (public)
+	input := &models.SnippetInput{
+		Title:    "Test Snippet",
+		Content:  "content",
+		Language: "plaintext",
+		IsPublic: true,
+	}
+	created, err := repo.Create(ctx, input)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	// Initial state should be unarchived and public
+	if created.IsArchived {
+		t.Error("expected initial IsArchived to be false")
+	}
+	if !created.IsPublic {
+		t.Error("expected initial IsPublic to be true")
+	}
+
+	// Toggle archive (archive it)
+	updated, err := repo.ToggleArchive(ctx, created.ID)
+	if err != nil {
+		t.Fatalf("ToggleArchive failed: %v", err)
+	}
+	if !updated.IsArchived {
+		t.Error("expected IsArchived to be true after toggle")
+	}
+	// It should now be private
+	if updated.IsPublic {
+		t.Error("expected IsPublic to be false after archiving")
+	}
+
+	// Toggle again (unarchive it)
+	updated, err = repo.ToggleArchive(ctx, created.ID)
+	if err != nil {
+		t.Fatalf("ToggleArchive failed: %v", err)
+	}
+	if updated.IsArchived {
+		t.Error("expected IsArchived to be false after second toggle")
+	}
+	// It should remain private (we don't restore public status)
+	if updated.IsPublic {
+		t.Error("expected IsPublic to remain false after unarchiving")
+	}
+}
+
+func TestSnippetRepository_List_FilterByArchive(t *testing.T) {
+	db := testutil.TestDB(t)
+	repo := NewSnippetRepository(db)
+	ctx := testutil.TestContext()
+
+	// Create active snippet
+	activeInput := &models.SnippetInput{Title: "Active", Content: "c", Language: "p"}
+	active, _ := repo.Create(ctx, activeInput)
+
+	// Create archived snippet
+	archivedInput := &models.SnippetInput{Title: "Archived", Content: "c", Language: "p", IsArchived: true}
+	archived, _ := repo.Create(ctx, archivedInput)
+
+	// Case 1: Default filter (IsArchived = nil, defaults to active only)
+	filterActive := models.SnippetFilter{}
+	listActive, err := repo.List(ctx, filterActive)
+	if err != nil {
+		t.Fatalf("List failed: %v", err)
+	}
+	if len(listActive.Data) != 1 || listActive.Data[0].ID != active.ID {
+		t.Errorf("expected 1 active snippet, got %d", len(listActive.Data))
+	}
+
+	// Case 2: Explicitly IsArchived = true
+	isArchived := true
+	filterArchived := models.SnippetFilter{IsArchived: &isArchived}
+	listArchived, err := repo.List(ctx, filterArchived)
+	if err != nil {
+		t.Fatalf("List failed: %v", err)
+	}
+	if len(listArchived.Data) != 1 || listArchived.Data[0].ID != archived.ID {
+		t.Errorf("expected 1 archived snippet, got %d", len(listArchived.Data))
+	}
+
+	// Case 3: Explicitly IsArchived = false
+	isNotArchived := false
+	filterNotArchived := models.SnippetFilter{IsArchived: &isNotArchived}
+	listNotArchived, err := repo.List(ctx, filterNotArchived)
+	if err != nil {
+		t.Fatalf("List failed: %v", err)
+	}
+	if len(listNotArchived.Data) != 1 || listNotArchived.Data[0].ID != active.ID {
+		t.Errorf("expected 1 active snippet, got %d", len(listNotArchived.Data))
 	}
 }

@@ -295,6 +295,7 @@ func (b *BackupService) Import(ctx context.Context, content []byte, opts models.
 			Content:     snippet.Content,
 			Language:    snippet.Language,
 			IsPublic:    snippet.IsPublic,
+			IsArchived:  snippet.IsArchived,
 		}
 
 		// Map tags
