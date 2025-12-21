@@ -133,9 +133,9 @@ type APIToken struct {
 
 // APITokenInput struct here represents input for creating an API token
 type APITokenInput struct {
-	Name        string     `json:"name"`
-	Permissions string     `json:"permissions"` // "read", "write", "admin"
-	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
+	Name          string `json:"name"`
+	Permissions   string `json:"permissions"` // "read", "write", "admin"
+	ExpiresInDays *int   `json:"expires_in_days,omitempty"`
 }
 
 // Pagination holds pagination info for list responses (ايه ده ؟)

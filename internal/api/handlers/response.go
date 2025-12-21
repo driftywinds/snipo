@@ -18,6 +18,7 @@ func DecodeJSON(r *http.Request, v interface{}) error {
 	decoder.DisallowUnknownFields() // Reject unknown fields for stricter validation
 
 	if err := decoder.Decode(v); err != nil {
+		// Return err with more context for debugging
 		return err
 	}
 

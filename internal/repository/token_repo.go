@@ -55,6 +55,13 @@ func (r *TokenRepository) Create(ctx context.Context, input *models.APITokenInpu
 		return nil, fmt.Errorf("invalid permissions: must be 'read', 'write', or 'admin'")
 	}
 
+	// Calculate expiration date from expires_in_days
+	var expiresAt *time.Time
+	if input.ExpiresInDays != nil && *input.ExpiresInDays > 0 {
+		expiration := time.Now().AddDate(0, 0, *input.ExpiresInDays)
+		expiresAt = &expiration
+	}
+
 	query := `
 		INSERT INTO api_tokens (name, token_hash, permissions, expires_at)
 		VALUES (?, ?, ?, ?)
@@ -62,7 +69,7 @@ func (r *TokenRepository) Create(ctx context.Context, input *models.APITokenInpu
 	`
 
 	apiToken := &models.APIToken{}
-	err = r.db.QueryRowContext(ctx, query, input.Name, tokenHash, input.Permissions, input.ExpiresAt).Scan(
+	err = r.db.QueryRowContext(ctx, query, input.Name, tokenHash, input.Permissions, expiresAt).Scan(
 		&apiToken.ID,
 		&apiToken.Name,
 		&apiToken.Permissions,
