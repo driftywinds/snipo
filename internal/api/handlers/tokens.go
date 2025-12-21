@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -36,7 +37,8 @@ func (h *TokenHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *TokenHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var input models.APITokenInput
 	if err := DecodeJSON(r, &input); err != nil {
-		Error(w, http.StatusBadRequest, "INVALID_JSON", "Invalid JSON payload")
+		// Provide more detailed error message for debugging
+		Error(w, http.StatusBadRequest, "INVALID_JSON", fmt.Sprintf("Invalid JSON payload: %v", err))
 		return
 	}
 
