@@ -407,7 +407,7 @@
                     placeholder="Snippet title..." @input="scheduleAutoSave()">
 
                 <div class="flex gap-2">
-                    <button class="btn-icon" @click="toggleFavorite(editingSnippet)" x-show="editingSnippet?.id"
+                    <button class="btn-action" @click="toggleFavorite(editingSnippet)" x-show="editingSnippet?.id"
                         title="Toggle Favorite">
                         <svg viewBox="0 0 24 24" :fill="editingSnippet?.is_favorite ? 'currentColor' : 'none'"
                             stroke="currentColor" stroke-width="2">
@@ -415,43 +415,51 @@
                                 points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
                             </polygon>
                         </svg>
+                        <span x-text="editingSnippet?.is_favorite ? 'Favorited' : 'Favorite'"></span>
                     </button>
-                    <button class="btn-icon" @click="copyToClipboard(editingSnippet)" title="Copy Code">
+                    <button class="btn-action" @click="copyToClipboard(editingSnippet)" title="Copy Code">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                         </svg>
+                        <span>Copy</span>
                     </button>
-                    <button class="btn-icon" @click="copyShareLink(editingSnippet)"
+                    <button class="btn-action" @click="copyShareLink(editingSnippet)"
                         x-show="editingSnippet?.id && editingSnippet?.is_public" title="Copy Share Link">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
                             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
                         </svg>
+                        <span>Share</span>
                     </button>
-                    <button class="btn-icon" @click="confirmDelete(editingSnippet)" x-show="editingSnippet?.id"
+                    <button class="btn-action danger" @click="confirmDelete(editingSnippet)" x-show="editingSnippet?.id"
                         title="Delete">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="3 6 5 6 21 6"></polyline>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
                             </path>
                         </svg>
+                        <span>Delete</span>
                     </button>
 
                     <!-- Edit button (preview mode) -->
-                    <button class="btn-primary" x-show="!isEditing" @click="startEditing()"
-                        style="padding: 0.5rem 1rem;">
+                    <button class="btn-action primary" x-show="!isEditing" @click="startEditing()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"
-                            height="16" style="margin-right: 0.25rem;">
+                            height="16">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                         </svg>
-                        Edit
+                        <span>Edit</span>
                     </button>
 
                     <!-- Save button (edit mode) -->
-                    <button class="btn-primary" x-show="isEditing" @click="saveSnippet()" style="padding: 0.5rem 1rem;">
-                        Save
+                    <button class="btn-action primary" x-show="isEditing" @click="saveSnippet()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        <span>Save</span>
                     </button>
                 </div>
             </div>
@@ -460,20 +468,7 @@
             <div class="preview-mode" x-show="!isEditing">
                 <!-- Metadata bar -->
                 <div class="preview-metadata">
-                    <!-- Toggle Focus Mode -->
-                    <div class="preview-meta-item">
-                        <button class="btn-icon btn-focus" :class="{ 'active': !editorHeaderVisible }"
-                            @click="editorHeaderVisible = !editorHeaderVisible" title="Focus Mode (Toggle Header)"
-                            style="padding: 2px;">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"
-                                height="16">
-                                <path d="M15 3h6v6"></path>
-                                <path d="M14 10l6.1-6.1"></path>
-                                <path d="M9 21H3v-6"></path>
-                                <path d="M10 14l-6.1 6.1"></path>
-                            </svg>
-                        </button>
-                    </div>
+
                     <div class="preview-meta-item" x-show="editingSnippet.description">
                         <span class="preview-meta-label">Description</span>
                         <span x-text="editingSnippet.description"></span>
@@ -500,6 +495,20 @@
                     </div>
                     <div class="preview-meta-item" x-show="editingSnippet.is_public">
                         <span class="tag-badge public-badge">Public</span>
+                    </div>
+                    <!-- Toggle Focus Mode (Moved to end) -->
+                    <div class="preview-meta-item" style="margin-left: auto;">
+                        <button class="btn-icon btn-focus" :class="{ 'active': !editorHeaderVisible }"
+                            @click="editorHeaderVisible = !editorHeaderVisible" title="Focus Mode (Toggle Header)"
+                            style="padding: 2px;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"
+                                height="16">
+                                <path d="M15 3h6v6"></path>
+                                <path d="M14 10l6.1-6.1"></path>
+                                <path d="M9 21H3v-6"></path>
+                                <path d="M10 14l-6.1 6.1"></path>
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
@@ -578,8 +587,11 @@
                         </select>
                     </div>
 
-                    <label class="public-toggle" title="Make snippet publicly accessible">
+                    <label class="public-toggle-switch" title="Make snippet publicly accessible">
                         <input type="checkbox" x-model="editingSnippet.is_public">
+                        <div class="public-switch-track">
+                            <div class="public-switch-thumb"></div>
+                        </div>
                         <span>Public</span>
                     </label>
 
