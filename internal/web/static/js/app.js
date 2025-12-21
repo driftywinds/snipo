@@ -177,7 +177,8 @@ document.addEventListener('alpine:init', () => {
       tagId: null,
       folderId: null,
       language: '',
-      isFavorite: null
+      isFavorite: null,
+      isArchived: null
     },
     pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
     totalSnippets: 0, // Total count for "All Snippets" (unfiltered)
@@ -217,6 +218,7 @@ document.addEventListener('alpine:init', () => {
     importResult: null,
     s3Status: { enabled: false },
     s3Backups: [],
+    settings: { archive_enabled: false }, // Application settings
     // Ace Editor instance
     aceEditor: null,
     aceIgnoreChange: false, // Flag to prevent infinite loops
@@ -226,7 +228,11 @@ document.addEventListener('alpine:init', () => {
         this.loadSnippets(),
         this.loadTags(),
         this.loadFolders(),
-        this.loadFavoritesCount()
+        this.loadSnippets(),
+        this.loadTags(),
+        this.loadFolders(),
+        this.loadFavoritesCount(),
+        this.loadSettings()
       ]);
       // Store total snippets count on initial load
       this.totalSnippets = this.pagination.total;
@@ -493,6 +499,7 @@ document.addEventListener('alpine:init', () => {
       if (this.filter.folderId) params.set('folder_id', this.filter.folderId);
       if (this.filter.language) params.set('language', this.filter.language);
       if (this.filter.isFavorite !== null) params.set('favorite', this.filter.isFavorite);
+      if (this.filter.isArchived !== null) params.set('is_archived', this.filter.isArchived);
 
       const result = await api.get(`/api/v1/snippets?${params}`);
       if (result) {
@@ -511,6 +518,21 @@ document.addEventListener('alpine:init', () => {
     async loadFolders() {
       const result = await api.get('/api/v1/folders?tree=true');
       if (result) this.folders = result.data || [];
+    },
+
+    async loadSettings() {
+      const result = await api.get('/api/v1/settings');
+      if (result) {
+        this.settings = result;
+      }
+    },
+
+    async updateSettings() {
+      const result = await api.put('/api/v1/settings', this.settings);
+      if (result) {
+        this.settings = result;
+        showToast('Settings updated');
+      }
     },
 
     async search() {
@@ -540,7 +562,7 @@ document.addEventListener('alpine:init', () => {
 
     async clearFilters() {
       this.showEditor = false;
-      this.filter = { query: '', tagId: null, folderId: null, language: '', isFavorite: null };
+      this.filter = { query: '', tagId: null, folderId: null, language: '', isFavorite: null, isArchived: null };
       this.pagination.page = 1;
       await this.loadSnippets();
       this.totalSnippets = this.pagination.total;
@@ -555,6 +577,48 @@ document.addEventListener('alpine:init', () => {
       this.pagination.page = 1;
       await this.loadSnippets();
       this.updateUrl({ favorites: true });
+    },
+
+    async showArchive() {
+      this.showEditor = false;
+      this.filter.isArchived = true;
+      this.filter.tagId = null;
+      this.filter.folderId = null;
+      this.filter.isFavorite = null;
+      this.pagination.page = 1;
+      await this.loadSnippets();
+      // URL update for archive? maybe ?archive=true
+    },
+
+    async toggleArchive(snippet) {
+      const result = await api.post(`/api/v1/snippets/${snippet.id}/archive`);
+      if (result) {
+        // If we are in detail view, update the snippet
+        if (this.editingSnippet.id === snippet.id) {
+          this.editingSnippet.is_archived = result.is_archived;
+        }
+
+        // If we filter by archive state, remove it from list
+        if (this.filter.isArchived !== null) {
+          this.snippets = this.snippets.filter(s => s.id !== snippet.id);
+        } else {
+          // Update in list
+          const idx = this.snippets.findIndex(s => s.id === snippet.id);
+          if (idx !== -1) {
+            this.snippets[idx].is_archived = result.is_archived;
+            // If we are showing "All" (default), archived snippets should be hidden?
+            // Backend default is hidden. If filter.isArchived is null (default),
+            // then getting the list again would hide it.
+            // But we want to avoid reload. 
+            // If is_archived became true, and filter is null (default = active only), remove it.
+            if (result.is_archived && this.filter.isArchived === null) {
+              this.snippets.splice(idx, 1);
+            }
+          }
+        }
+
+        showToast(result.is_archived ? 'Snippet archived' : 'Snippet unarchived');
+      }
     },
 
     newSnippet() {

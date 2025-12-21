@@ -47,12 +47,21 @@ func runTestMigrations(db *sql.DB) error {
 			language TEXT DEFAULT 'plaintext',
 			is_favorite INTEGER DEFAULT 0,
 			is_public INTEGER DEFAULT 0,
+			is_archived INTEGER DEFAULT 0,
 			view_count INTEGER DEFAULT 0,
 			s3_key TEXT DEFAULT NULL,
 			checksum TEXT DEFAULT NULL,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
+
+		-- Settings table
+		CREATE TABLE IF NOT EXISTS settings (
+			id INTEGER PRIMARY KEY CHECK (id = 1),
+			archive_enabled INTEGER DEFAULT 0,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		INSERT OR IGNORE INTO settings (id, archive_enabled) VALUES (1, 0);
 
 		-- Tags table
 		CREATE TABLE IF NOT EXISTS tags (
@@ -127,6 +136,7 @@ func runTestMigrations(db *sql.DB) error {
 		CREATE INDEX IF NOT EXISTS idx_snippets_language ON snippets(language);
 		CREATE INDEX IF NOT EXISTS idx_snippets_favorite ON snippets(is_favorite);
 		CREATE INDEX IF NOT EXISTS idx_snippets_public ON snippets(is_public);
+		CREATE INDEX IF NOT EXISTS idx_snippets_archived ON snippets(is_archived);
 		CREATE INDEX IF NOT EXISTS idx_snippets_created ON snippets(created_at DESC);
 		CREATE INDEX IF NOT EXISTS idx_snippets_updated ON snippets(updated_at DESC);
 		CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
