@@ -55,9 +55,32 @@
 }
 
 .modal-body {
-  padding: 1.5rem;
+  padding: 1.25rem;
   overflow-y: auto;
   flex: 1;
+  font-size: 0.85rem;
+}
+
+/* Reduce font sizes for all settings modal content */
+.settings-modal .modal-body label,
+.settings-modal .modal-body .checkbox-label span {
+  font-size: 0.85rem;
+}
+
+.settings-modal .modal-body p,
+.settings-modal .modal-body .text-sm {
+  font-size: 0.8rem;
+}
+
+.settings-modal .modal-body input,
+.settings-modal .modal-body select,
+.settings-modal .modal-body textarea,
+.settings-modal .modal-body button {
+  font-size: 0.85rem;
+}
+
+.settings-modal .modal-body .editor-field {
+  margin-bottom: 0.75rem;
 }
 
 .modal-footer {
@@ -87,7 +110,7 @@
 
 /* Settings modal */
 .settings-modal {
-  max-width: 600px;
+  max-width: 800px;
   width: 90%;
 }
 
@@ -100,14 +123,14 @@
 .settings-tab {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
+  gap: 0.4rem;
+  padding: 0.65rem 0.85rem;
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
   color: var(--icon-color);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   transition: color 0.15s, border-color 0.15s;
 }
 
@@ -157,10 +180,11 @@
 .api-token-name {
   font-weight: 600;
   margin-bottom: 0.25rem;
+  font-size: 0.85rem;
 }
 
 .api-token-meta {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--pico-muted-color);
   display: flex;
   flex-wrap: wrap;
@@ -172,6 +196,6 @@
   color: white;
   padding: 0.125rem 0.5rem;
   border-radius: 0.25rem;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   text-transform: uppercase;
 }
