@@ -323,7 +323,9 @@ export const editorMixin = {
       const isDark = theme.get() === 'dark';
       aceTheme = isDark ? 'ace/theme/monokai' : 'ace/theme/chrome';
     } else {
-      aceTheme = `ace/theme/${editorTheme}`;
+      // Convert underscores to hyphens for Ace theme names
+      const themeName = editorTheme.replace(/_/g, '-');
+      aceTheme = `ace/theme/${themeName}`;
     }
 
     if (!this.aceEditor) {
@@ -398,10 +400,7 @@ export const editorMixin = {
         highlightActiveLine: settings.editor_highlight_active_line !== false,
         tabSize: settings.editor_tab_size || 2,
         useSoftTabs: settings.editor_use_soft_tabs !== false,
-        wrap: settings.editor_word_wrap !== false,
-        enableBasicAutocompletion: true,
-        enableLiveAutocompletion: settings.editor_enable_live_autocompletion !== false,
-        enableSnippets: settings.editor_enable_snippets !== false
+        wrap: settings.editor_word_wrap !== false
       });
 
       // Update theme if needed
@@ -411,7 +410,9 @@ export const editorMixin = {
         const isDark = theme.get() === 'dark';
         aceTheme = isDark ? 'ace/theme/monokai' : 'ace/theme/chrome';
       } else {
-        aceTheme = `ace/theme/${editorTheme}`;
+        // Convert underscores to hyphens for Ace theme names
+        const themeName = editorTheme.replace(/_/g, '-');
+        aceTheme = `ace/theme/${themeName}`;
       }
       this.aceEditor.setTheme(aceTheme);
     } catch (e) {

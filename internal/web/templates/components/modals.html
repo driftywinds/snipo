@@ -401,11 +401,6 @@
                                 <option value="auto">Auto (Follow App Theme)</option>
                                 <option value="chrome">Chrome (Light)</option>
                                 <option value="monokai">Monokai (Dark)</option>
-                                <option value="github">GitHub (Light)</option>
-                                <option value="tomorrow_night">Tomorrow Night (Dark)</option>
-                                <option value="twilight">Twilight (Dark)</option>
-                                <option value="solarized_light">Solarized Light</option>
-                                <option value="solarized_dark">Solarized Dark</option>
                             </select>
                         </div>
                     </div>
@@ -470,27 +465,6 @@
                             <span>Word Wrap</span>
                         </label>
                         <p class="text-sm text-muted" style="margin-top: 0.25rem;">Wrap long lines to fit in the editor width.</p>
-                    </div>
-                </div>
-
-                <!-- Advanced Features -->
-                <div style="padding-top: 1.5rem; border-top: 1px solid var(--snipo-border);">
-                    <h5 style="margin-bottom: 0.75rem; font-size: 0.9rem;">Advanced Features</h5>
-
-                    <div class="editor-field">
-                        <label class="checkbox-label">
-                            <input type="checkbox" x-model="settings.editor_enable_live_autocompletion" @change="updateSettings(); applyEditorSettings()">
-                            <span>Enable Live Autocomplete</span>
-                        </label>
-                        <p class="text-sm text-muted" style="margin-top: 0.25rem;">Show suggestions as you type.</p>
-                    </div>
-
-                    <div class="editor-field" style="margin-top: 1rem;">
-                        <label class="checkbox-label">
-                            <input type="checkbox" x-model="settings.editor_enable_snippets" @change="updateSettings(); applyEditorSettings()">
-                            <span>Enable Code Snippets</span>
-                        </label>
-                        <p class="text-sm text-muted" style="margin-top: 0.25rem;">Enable snippet expansion and templates.</p>
                     </div>
                 </div>
             </div>
