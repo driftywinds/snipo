@@ -85,23 +85,34 @@ func (rl *APIRateLimiter) RateLimitByPermission(permission string) func(http.Han
 				}
 			}
 
-			remaining := limit - len(recent)
+			// Check if limit is exceeded
+			if len(recent) >= limit {
+				rl.mu.Unlock()
+				retryAfter := int(rl.window.Seconds())
+				reset := now.Add(rl.window).Unix()
+				
+				// Set rate limit headers
+				w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", limit))
+				w.Header().Set("X-RateLimit-Remaining", "0")
+				w.Header().Set("X-RateLimit-Reset", fmt.Sprintf("%d", reset))
+				w.Header().Set("Retry-After", fmt.Sprintf("%d", retryAfter))
+				
+				http.Error(w, `{"error":{"code":"RATE_LIMIT_EXCEEDED","message":"Rate limit exceeded. Please try again later."}}`, http.StatusTooManyRequests)
+				return
+			}
+
+			// Add current request
+			rl.requests[identifier] = append(recent, now)
+			
+			// Calculate remaining after adding this request
+			remaining := limit - len(rl.requests[identifier])
 			
 			// Set rate limit headers
 			reset := now.Add(rl.window).Unix()
 			w.Header().Set("X-RateLimit-Limit", fmt.Sprintf("%d", limit))
 			w.Header().Set("X-RateLimit-Remaining", fmt.Sprintf("%d", max(0, remaining)))
 			w.Header().Set("X-RateLimit-Reset", fmt.Sprintf("%d", reset))
-
-			if len(recent) >= limit {
-				rl.mu.Unlock()
-				retryAfter := int(rl.window.Seconds())
-				w.Header().Set("Retry-After", fmt.Sprintf("%d", retryAfter))
-				http.Error(w, `{"error":{"code":"RATE_LIMIT_EXCEEDED","message":"Rate limit exceeded. Please try again later."}}`, http.StatusTooManyRequests)
-				return
-			}
-
-			rl.requests[identifier] = append(recent, now)
+			
 			rl.mu.Unlock()
 
 			next.ServeHTTP(w, r)
