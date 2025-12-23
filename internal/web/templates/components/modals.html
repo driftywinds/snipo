@@ -50,6 +50,14 @@
                 </svg>
                 General
             </button>
+            <button class="settings-tab" :class="{ active: settingsTab === 'appearance' }"
+                @click="settingsTab = 'appearance'">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                Appearance
+            </button>
             <button class="settings-tab" :class="{ active: settingsTab === 'editor' }"
                 @click="settingsTab = 'editor'">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
@@ -104,6 +112,31 @@
                         <span>Enable Modification History</span>
                     </label>
                     <p class="text-sm text-muted" style="margin-top: 0.25rem;">Track all changes to snippets. Previous versions can be viewed and restored at any time.</p>
+                </div>
+            </div>
+
+            <!-- Appearance tab -->
+            <div x-show="settingsTab === 'appearance'">
+                <h4 style="margin-bottom: 1rem; font-size: 1rem;">Appearance Settings</h4>
+                <p class="text-sm text-muted" style="margin-bottom: 1.5rem;">
+                    Customize the visual appearance of previews and content display.
+                </p>
+
+                <div class="editor-field">
+                    <label>Markdown Preview Font Size</label>
+                    <select x-model.number="settings.markdown_font_size" @change="updateSettings(); applyMarkdownFontSize()">
+                        <option value="10">10px</option>
+                        <option value="11">11px</option>
+                        <option value="12">12px</option>
+                        <option value="13">13px</option>
+                        <option value="14">14px (Default)</option>
+                        <option value="15">15px</option>
+                        <option value="16">16px</option>
+                        <option value="18">18px</option>
+                        <option value="20">20px</option>
+                        <option value="22">22px</option>
+                    </select>
+                    <p class="text-sm text-muted" style="margin-top: 0.25rem;">Adjust the font size for markdown file previews.</p>
                 </div>
             </div>
 
