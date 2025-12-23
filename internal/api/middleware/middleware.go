@@ -9,39 +9,88 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/MohamedElashri/snipo/internal/auth"
 	"github.com/MohamedElashri/snipo/internal/repository"
 )
 
-// Context keys for authentication
+// Context keys for authentication and request tracking
 type contextKey string
 
 const (
 	// ContextKeyAPIToken is the context key for API token
 	ContextKeyAPIToken contextKey = "api_token"
+	// ContextKeyRequestID is the context key for request ID
+	ContextKeyRequestID contextKey = "request_id"
 )
+
+// API version
+const APIVersion = "1.0"
+
+// RequestID generates a unique request ID for tracking
+func RequestID(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check if request already has an ID (from proxy/load balancer)
+		requestID := r.Header.Get("X-Request-ID")
+		if requestID == "" {
+			// Generate new UUID
+			requestID = uuid.New().String()
+		}
+
+		// Add to response header
+		w.Header().Set("X-Request-ID", requestID)
+
+		// Add to context for use in handlers and logging
+		ctx := context.WithValue(r.Context(), ContextKeyRequestID, requestID)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// GetRequestID retrieves the request ID from context
+func GetRequestID(ctx context.Context) string {
+	if requestID, ok := ctx.Value(ContextKeyRequestID).(string); ok {
+		return requestID
+	}
+	return ""
+}
 
 // SecurityHeaders adds essential security headers to responses
 func SecurityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// API version header
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			w.Header().Set("X-API-Version", APIVersion)
+		}
+
 		// Prevent XSS
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("X-XSS-Protection", "1; mode=block")
 
-		// Content Security Policy - all resources served locally
-		w.Header().Set("Content-Security-Policy", strings.Join([]string{
-			"default-src 'self'",
-			"script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:", // unsafe-eval needed for Alpine.js, blob for Ace workers
-			"style-src 'self' 'unsafe-inline'",
-			"img-src 'self' data: blob:",
-			"font-src 'self'",
-			"connect-src 'self'",
-			"worker-src 'self' blob:", // Allow Ace Editor web workers
-			"frame-ancestors 'none'",
-			"form-action 'self'",
-			"base-uri 'self'",
-		}, "; "))
+		// Content Security Policy - differentiate between API and web routes
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			// Stricter CSP for API-only routes (JSON responses)
+			w.Header().Set("Content-Security-Policy", strings.Join([]string{
+				"default-src 'none'",
+				"frame-ancestors 'none'",
+			}, "; "))
+		} else {
+			// Full CSP for web UI routes
+			w.Header().Set("Content-Security-Policy", strings.Join([]string{
+				"default-src 'self'",
+				"script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:", // unsafe-eval needed for Alpine.js, blob for Ace workers
+				"style-src 'self' 'unsafe-inline'",
+				"img-src 'self' data: blob:",
+				"font-src 'self'",
+				"connect-src 'self'",
+				"worker-src 'self' blob:", // Allow Ace Editor web workers
+				"frame-ancestors 'none'",
+				"form-action 'self'",
+				"base-uri 'self'",
+			}, "; "))
+		}
 
 		// HTTPS enforcement (only in production)
 		w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
@@ -56,7 +105,7 @@ func SecurityHeaders(next http.Handler) http.Handler {
 	})
 }
 
-// Logger logs HTTP requests
+// Logger logs HTTP requests with request ID
 func Logger(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -69,7 +118,11 @@ func Logger(logger *slog.Logger) func(http.Handler) http.Handler {
 
 			duration := time.Since(start)
 
+			// Get request ID from context
+			requestID := GetRequestID(r.Context())
+
 			logger.Info("request",
+				"request_id", requestID,
 				"method", r.Method,
 				"path", r.URL.Path,
 				"status", wrapped.statusCode,

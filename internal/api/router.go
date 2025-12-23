@@ -34,14 +34,23 @@ type RouterConfig struct {
 func NewRouter(cfg RouterConfig) http.Handler {
 	r := chi.NewRouter()
 
-	// Global middleware
-	r.Use(middleware.Recovery(cfg.Logger))
-	r.Use(middleware.Logger(cfg.Logger))
-	r.Use(middleware.SecurityHeaders)
-	r.Use(middleware.CORS)
+	// Global middleware (order matters!)
+	r.Use(middleware.RequestID)              // Generate request IDs first
+	r.Use(middleware.Recovery(cfg.Logger))   // Catch panics
+	r.Use(middleware.Logger(cfg.Logger))     // Log requests (includes request ID)
+	r.Use(middleware.SecurityHeaders)        // Security headers (includes X-API-Version)
+	r.Use(middleware.CORS)                   // CORS handling
 
 	// Rate limiting for auth endpoints
-	rateLimiter := middleware.NewRateLimiter(cfg.RateLimit, 60*1000*1000*1000) // 1 minute in nanoseconds (nothing planck scale)
+	authRateLimiter := middleware.NewRateLimiter(cfg.RateLimit, 60*1000*1000*1000) // 1 minute in nanoseconds
+
+	// API rate limiter with permission-based limits
+	apiRateLimiter := middleware.NewAPIRateLimiter(middleware.RateLimitConfig{
+		ReadLimit:  1000, // 1000 requests per hour for read operations
+		WriteLimit: 500,  // 500 requests per hour for write operations
+		AdminLimit: 100,  // 100 requests per hour for admin operations
+		Window:     time.Hour,
+	})
 
 	// Create repositories
 	snippetRepo := repository.NewSnippetRepository(cfg.DB)
@@ -104,7 +113,7 @@ func NewRouter(cfg RouterConfig) http.Handler {
 
 		// Auth endpoints (with rate limiting)
 		r.Group(func(r chi.Router) {
-			r.Use(rateLimiter.Middleware)
+			r.Use(authRateLimiter.Middleware)
 			r.Post("/api/v1/auth/login", authHandler.Login)
 		})
 
@@ -112,66 +121,70 @@ func NewRouter(cfg RouterConfig) http.Handler {
 		r.Get("/api/v1/auth/check", authHandler.Check)
 	})
 
-	// Protected routes (auth required)
+	// Protected routes (auth required + rate limiting)
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.RequireAuthWithTokenRepo(cfg.AuthService, tokenRepo))
 
-		// Auth management (protected)
+		// Auth management (protected, requires any auth)
 		r.Post("/api/v1/auth/change-password", authHandler.ChangePassword)
 
-		// Settings management
+		// Settings management (admin only)
 		r.Route("/api/v1/settings", func(r chi.Router) {
+			r.Use(middleware.RequireAdmin)
+			r.Use(apiRateLimiter.RateLimitAdmin)
 			r.Get("/", settingsHandler.Get)
 			r.Put("/", settingsHandler.Update)
 		})
 
-		// Snippet CRUD
+		// Snippet CRUD (read for GET, write for modifications)
 		r.Route("/api/v1/snippets", func(r chi.Router) {
-			r.Get("/", snippetHandler.List)
-			r.Post("/", snippetHandler.Create)
-			r.Get("/search", snippetHandler.Search)
+			r.With(middleware.RequireRead, apiRateLimiter.RateLimitRead).Get("/", snippetHandler.List)
+			r.With(middleware.RequireWrite, apiRateLimiter.RateLimitWrite).Post("/", snippetHandler.Create)
+			r.With(middleware.RequireRead, apiRateLimiter.RateLimitRead).Get("/search", snippetHandler.Search)
 
 			r.Route("/{id}", func(r chi.Router) {
-				r.Get("/", snippetHandler.Get)
-				r.Put("/", snippetHandler.Update)
-				r.Delete("/", snippetHandler.Delete)
-				r.Post("/favorite", snippetHandler.ToggleFavorite)
-				r.Post("/archive", snippetHandler.ToggleArchive)
-				r.Post("/duplicate", snippetHandler.Duplicate)
+				r.With(middleware.RequireRead, apiRateLimiter.RateLimitRead).Get("/", snippetHandler.Get)
+				r.With(middleware.RequireWrite, apiRateLimiter.RateLimitWrite).Put("/", snippetHandler.Update)
+				r.With(middleware.RequireWrite, apiRateLimiter.RateLimitWrite).Delete("/", snippetHandler.Delete)
+				r.With(middleware.RequireWrite, apiRateLimiter.RateLimitWrite).Post("/favorite", snippetHandler.ToggleFavorite)
+				r.With(middleware.RequireWrite, apiRateLimiter.RateLimitWrite).Post("/archive", snippetHandler.ToggleArchive)
+				r.With(middleware.RequireWrite, apiRateLimiter.RateLimitWrite).Post("/duplicate", snippetHandler.Duplicate)
 				
 				// History routes
-				r.Get("/history", snippetHandler.GetHistory)
-				r.Post("/history/{history_id}/restore", snippetHandler.RestoreFromHistory)
+				r.With(middleware.RequireRead, apiRateLimiter.RateLimitRead).Get("/history", snippetHandler.GetHistory)
+				r.With(middleware.RequireWrite, apiRateLimiter.RateLimitWrite).Post("/history/{history_id}/restore", snippetHandler.RestoreFromHistory)
 			})
 		})
 
-		// Tag CRUD
+		// Tag CRUD (read for GET, write for modifications)
 		r.Route("/api/v1/tags", func(r chi.Router) {
-			r.Get("/", tagHandler.List)
-			r.Post("/", tagHandler.Create)
+			r.With(middleware.RequireRead, apiRateLimiter.RateLimitRead).Get("/", tagHandler.List)
+			r.With(middleware.RequireWrite, apiRateLimiter.RateLimitWrite).Post("/", tagHandler.Create)
 
 			r.Route("/{id}", func(r chi.Router) {
-				r.Get("/", tagHandler.Get)
-				r.Put("/", tagHandler.Update)
-				r.Delete("/", tagHandler.Delete)
+				r.With(middleware.RequireRead, apiRateLimiter.RateLimitRead).Get("/", tagHandler.Get)
+				r.With(middleware.RequireWrite, apiRateLimiter.RateLimitWrite).Put("/", tagHandler.Update)
+				r.With(middleware.RequireWrite, apiRateLimiter.RateLimitWrite).Delete("/", tagHandler.Delete)
 			})
 		})
 
-		// Folder CRUD
+		// Folder CRUD (read for GET, write for modifications)
 		r.Route("/api/v1/folders", func(r chi.Router) {
-			r.Get("/", folderHandler.List)
-			r.Post("/", folderHandler.Create)
+			r.With(middleware.RequireRead, apiRateLimiter.RateLimitRead).Get("/", folderHandler.List)
+			r.With(middleware.RequireWrite, apiRateLimiter.RateLimitWrite).Post("/", folderHandler.Create)
 
 			r.Route("/{id}", func(r chi.Router) {
-				r.Get("/", folderHandler.Get)
-				r.Put("/", folderHandler.Update)
-				r.Delete("/", folderHandler.Delete)
-				r.Put("/move", folderHandler.Move)
+				r.With(middleware.RequireRead, apiRateLimiter.RateLimitRead).Get("/", folderHandler.Get)
+				r.With(middleware.RequireWrite, apiRateLimiter.RateLimitWrite).Put("/", folderHandler.Update)
+				r.With(middleware.RequireWrite, apiRateLimiter.RateLimitWrite).Delete("/", folderHandler.Delete)
+				r.With(middleware.RequireWrite, apiRateLimiter.RateLimitWrite).Put("/move", folderHandler.Move)
 			})
 		})
 
-		// API Token management
+		// API Token management (admin only)
 		r.Route("/api/v1/tokens", func(r chi.Router) {
+			r.Use(middleware.RequireAdmin)
+			r.Use(apiRateLimiter.RateLimitAdmin)
 			r.Get("/", tokenHandler.List)
 			r.Post("/", tokenHandler.Create)
 
@@ -181,8 +194,10 @@ func NewRouter(cfg RouterConfig) http.Handler {
 			})
 		})
 
-		// Backup & Restore
+		// Backup & Restore (admin only)
 		r.Route("/api/v1/backup", func(r chi.Router) {
+			r.Use(middleware.RequireAdmin)
+			r.Use(apiRateLimiter.RateLimitAdmin)
 			r.Get("/export", backupHandler.Export)
 			r.Post("/import", backupHandler.Import)
 
