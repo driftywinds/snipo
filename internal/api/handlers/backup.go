@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"io"
+	"log/slog"
 	"net/http"
 
 	"github.com/MohamedElashri/snipo/internal/models"
@@ -69,7 +70,11 @@ func (h *BackupHandler) Import(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusBadRequest, "MISSING_FILE", "No backup file provided")
 		return
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			slog.Error("failed to close file", "error", err)
+		}
+	}()
 
 	content, err := io.ReadAll(file)
 	if err != nil {

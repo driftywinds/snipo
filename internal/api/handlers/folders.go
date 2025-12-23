@@ -9,6 +9,7 @@ import (
 
 	"github.com/MohamedElashri/snipo/internal/models"
 	"github.com/MohamedElashri/snipo/internal/repository"
+	"github.com/MohamedElashri/snipo/internal/validation"
 )
 
 // FolderHandler handles folder-related HTTP requests
@@ -63,12 +64,12 @@ func (h *FolderHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	// Validate input
 	if input.Name == "" {
-		ValidationErrors(w, []ValidationError{{Field: "name", Message: "Name is required"}})
+		ValidationErrors(w, validation.ValidationErrors{validation.ValidationError{Field: "name", Message: "Name is required"}})
 		return
 	}
 
 	if len(input.Name) > 100 {
-		ValidationErrors(w, []ValidationError{{Field: "name", Message: "Name must be 100 characters or less"}})
+		ValidationErrors(w, validation.ValidationErrors{validation.ValidationError{Field: "name", Message: "Name must be 100 characters or less"}})
 		return
 	}
 
@@ -77,7 +78,7 @@ func (h *FolderHandler) Create(w http.ResponseWriter, r *http.Request) {
 		_, err := h.repo.GetByID(r.Context(), *input.ParentID)
 		if err != nil {
 			if errors.Is(err, repository.ErrNotFound) {
-				ValidationErrors(w, []ValidationError{{Field: "parent_id", Message: "Parent folder not found"}})
+				ValidationErrors(w, validation.ValidationErrors{validation.ValidationError{Field: "parent_id", Message: "Parent folder not found"}})
 				return
 			}
 			InternalError(w)
@@ -137,26 +138,26 @@ func (h *FolderHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	// Validate input
 	if input.Name == "" {
-		ValidationErrors(w, []ValidationError{{Field: "name", Message: "Name is required"}})
+		ValidationErrors(w, validation.ValidationErrors{validation.ValidationError{Field: "name", Message: "Name is required"}})
 		return
 	}
 
 	if len(input.Name) > 100 {
-		ValidationErrors(w, []ValidationError{{Field: "name", Message: "Name must be 100 characters or less"}})
+		ValidationErrors(w, validation.ValidationErrors{validation.ValidationError{Field: "name", Message: "Name must be 100 characters or less"}})
 		return
 	}
 
 	// Validate parent exists if provided and not self-referencing
 	if input.ParentID != nil {
 		if *input.ParentID == id {
-			ValidationErrors(w, []ValidationError{{Field: "parent_id", Message: "Folder cannot be its own parent"}})
+			ValidationErrors(w, validation.ValidationErrors{validation.ValidationError{Field: "parent_id", Message: "Folder cannot be its own parent"}})
 			return
 		}
 
 		_, err := h.repo.GetByID(r.Context(), *input.ParentID)
 		if err != nil {
 			if errors.Is(err, repository.ErrNotFound) {
-				ValidationErrors(w, []ValidationError{{Field: "parent_id", Message: "Parent folder not found"}})
+				ValidationErrors(w, validation.ValidationErrors{validation.ValidationError{Field: "parent_id", Message: "Parent folder not found"}})
 				return
 			}
 			InternalError(w)
@@ -219,7 +220,7 @@ func (h *FolderHandler) Move(w http.ResponseWriter, r *http.Request) {
 
 	// Validate not moving to self
 	if req.ParentID != nil && *req.ParentID == id {
-		ValidationErrors(w, []ValidationError{{Field: "parent_id", Message: "Folder cannot be its own parent"}})
+		ValidationErrors(w, validation.ValidationErrors{validation.ValidationError{Field: "parent_id", Message: "Folder cannot be its own parent"}})
 		return
 	}
 
@@ -228,7 +229,7 @@ func (h *FolderHandler) Move(w http.ResponseWriter, r *http.Request) {
 		_, err := h.repo.GetByID(r.Context(), *req.ParentID)
 		if err != nil {
 			if errors.Is(err, repository.ErrNotFound) {
-				ValidationErrors(w, []ValidationError{{Field: "parent_id", Message: "Parent folder not found"}})
+				ValidationErrors(w, validation.ValidationErrors{validation.ValidationError{Field: "parent_id", Message: "Parent folder not found"}})
 				return
 			}
 			InternalError(w)
@@ -244,7 +245,7 @@ func (h *FolderHandler) Move(w http.ResponseWriter, r *http.Request) {
 		}
 		// Check for circular reference error
 		if err.Error() == "cannot move folder: would create circular reference" {
-			ValidationErrors(w, []ValidationError{{Field: "parent_id", Message: "Cannot move folder: would create circular reference"}})
+			ValidationErrors(w, validation.ValidationErrors{validation.ValidationError{Field: "parent_id", Message: "Cannot move folder: would create circular reference"}})
 			return
 		}
 		InternalError(w)

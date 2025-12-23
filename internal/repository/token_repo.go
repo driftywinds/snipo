@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/MohamedElashri/snipo/internal/models"
@@ -143,7 +144,11 @@ func (r *TokenRepository) List(ctx context.Context) ([]models.APIToken, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tokens: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			slog.Error("failed to close rows", "error", err)
+		}
+	}()
 
 	var tokens []models.APIToken
 	for rows.Next() {

@@ -37,7 +37,7 @@ func TestCheckPermission(t *testing.T) {
 			// Create test handler
 			testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte("success"))
+				_, _ = w.Write([]byte("success"))
 			})
 
 			// Create token with specified permission
@@ -77,7 +77,7 @@ func TestCheckPermission_NoToken(t *testing.T) {
 	// When no token in context (session-based auth), should allow
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("success"))
+		_, _ = w.Write([]byte("success"))
 	})
 
 	req := httptest.NewRequest("GET", "/test", nil)

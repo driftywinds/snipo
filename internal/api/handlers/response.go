@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+
+	"github.com/MohamedElashri/snipo/internal/validation"
 )
 
 // MaxJSONBodySize is the maximum allowed size for JSON request bodies (2MB)
@@ -37,15 +39,9 @@ type ErrorResponse struct {
 
 // ErrorDetail contains error details
 type ErrorDetail struct {
-	Code    string            `json:"code"`
-	Message string            `json:"message"`
-	Details []ValidationError `json:"details,omitempty"`
-}
-
-// ValidationError represents a field validation error
-type ValidationError struct {
-	Field   string `json:"field"`
-	Message string `json:"message"`
+	Code    string                      `json:"code"`
+	Message string                      `json:"message"`
+	Details []validation.ValidationError `json:"details,omitempty"`
 }
 
 // JSON sends a JSON response
@@ -72,7 +68,7 @@ func Error(w http.ResponseWriter, status int, code, message string) {
 }
 
 // ValidationErrors sends a validation error response
-func ValidationErrors(w http.ResponseWriter, errors []ValidationError) {
+func ValidationErrors(w http.ResponseWriter, errors validation.ValidationErrors) {
 	JSON(w, http.StatusBadRequest, ErrorResponse{
 		Error: ErrorDetail{
 			Code:    "VALIDATION_ERROR",

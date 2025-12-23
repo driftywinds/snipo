@@ -99,11 +99,7 @@ func (h *SnippetHandler) Create(w http.ResponseWriter, r *http.Request) {
 		// Check if it's a validation error
 		var validationErrs validation.ValidationErrors
 		if errors.As(err, &validationErrs) {
-			errs := make([]ValidationError, len(validationErrs))
-			for i, e := range validationErrs {
-				errs[i] = ValidationError{Field: e.Field, Message: e.Message}
-			}
-			ValidationErrors(w, errs)
+			ValidationErrors(w, validationErrs)
 			return
 		}
 		InternalError(w)
@@ -156,11 +152,7 @@ func (h *SnippetHandler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 		var validationErrs validation.ValidationErrors
 		if errors.As(err, &validationErrs) {
-			errs := make([]ValidationError, len(validationErrs))
-			for i, e := range validationErrs {
-				errs[i] = ValidationError{Field: e.Field, Message: e.Message}
-			}
-			ValidationErrors(w, errs)
+			ValidationErrors(w, validationErrs)
 			return
 		}
 		InternalError(w)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/MohamedElashri/snipo/internal/models"
 	"github.com/MohamedElashri/snipo/internal/repository"
+	"github.com/MohamedElashri/snipo/internal/validation"
 )
 
 // TagHandler handles tag-related HTTP requests
@@ -50,12 +51,12 @@ func (h *TagHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	// Validate input
 	if input.Name == "" {
-		ValidationErrors(w, []ValidationError{{Field: "name", Message: "Name is required"}})
+		ValidationErrors(w, validation.ValidationErrors{validation.ValidationError{Field: "name", Message: "Name is required"}})
 		return
 	}
 
 	if len(input.Name) > 50 {
-		ValidationErrors(w, []ValidationError{{Field: "name", Message: "Name must be 50 characters or less"}})
+		ValidationErrors(w, validation.ValidationErrors{validation.ValidationError{Field: "name", Message: "Name must be 50 characters or less"}})
 		return
 	}
 
@@ -123,12 +124,12 @@ func (h *TagHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	// Validate input
 	if input.Name == "" {
-		ValidationErrors(w, []ValidationError{{Field: "name", Message: "Name is required"}})
+		ValidationErrors(w, validation.ValidationErrors{validation.ValidationError{Field: "name", Message: "Name is required"}})
 		return
 	}
 
 	if len(input.Name) > 50 {
-		ValidationErrors(w, []ValidationError{{Field: "name", Message: "Name must be 50 characters or less"}})
+		ValidationErrors(w, validation.ValidationErrors{validation.ValidationError{Field: "name", Message: "Name must be 50 characters or less"}})
 		return
 	}
 

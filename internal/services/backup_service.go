@@ -171,10 +171,10 @@ func (b *BackupService) Import(ctx context.Context, content []byte, opts models.
 					return nil, fmt.Errorf("failed to open metadata: %w", err)
 				}
 				if err := json.NewDecoder(rc).Decode(&data); err != nil {
-					rc.Close()
+					_ = rc.Close()
 					return nil, fmt.Errorf("failed to decode metadata: %w", err)
 				}
-				rc.Close()
+				_ = rc.Close()
 				break
 			}
 		}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/MohamedElashri/snipo/internal/models"
 	"github.com/MohamedElashri/snipo/internal/repository"
+	"github.com/MohamedElashri/snipo/internal/validation"
 )
 
 // TokenHandler handles API token-related HTTP requests
@@ -44,18 +45,18 @@ func (h *TokenHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	// Validate input
 	if input.Name == "" {
-		ValidationErrors(w, []ValidationError{{Field: "name", Message: "Name is required"}})
+		ValidationErrors(w, validation.ValidationErrors{validation.ValidationError{Field: "name", Message: "Name is required"}})
 		return
 	}
 
 	if len(input.Name) > 100 {
-		ValidationErrors(w, []ValidationError{{Field: "name", Message: "Name must be 100 characters or less"}})
+		ValidationErrors(w, validation.ValidationErrors{validation.ValidationError{Field: "name", Message: "Name must be 100 characters or less"}})
 		return
 	}
 
 	// Validate permissions
 	if input.Permissions != "" && input.Permissions != "read" && input.Permissions != "write" && input.Permissions != "admin" {
-		ValidationErrors(w, []ValidationError{{Field: "permissions", Message: "Permissions must be 'read', 'write', or 'admin'"}})
+		ValidationErrors(w, validation.ValidationErrors{validation.ValidationError{Field: "permissions", Message: "Permissions must be 'read', 'write', or 'admin'"}})
 		return
 	}
 

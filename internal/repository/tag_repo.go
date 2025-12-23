@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 
 	"github.com/MohamedElashri/snipo/internal/models"
 )
@@ -97,7 +98,11 @@ func (r *TagRepository) List(ctx context.Context) ([]models.Tag, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tags: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			slog.Error("failed to close rows", "error", err)
+		}
+	}()
 
 	var tags []models.Tag
 	for rows.Next() {
@@ -174,7 +179,11 @@ func (r *TagRepository) GetSnippetTags(ctx context.Context, snippetID string) ([
 	if err != nil {
 		return nil, fmt.Errorf("failed to get snippet tags: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			slog.Error("failed to close rows", "error", err)
+		}
+	}()
 
 	var tags []models.Tag
 	for rows.Next() {

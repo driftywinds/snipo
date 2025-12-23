@@ -96,8 +96,8 @@ func ValidateSnippetInput(input *models.SnippetInput) ValidationErrors {
 
 	// Description length
 	input.Description = strings.TrimSpace(input.Description)
-	if utf8.RuneCountInString(input.Description) > 500 {
-		errs = append(errs, ValidationError{Field: "description", Message: "Description must be less than 500 characters"})
+	if utf8.RuneCountInString(input.Description) > 1000 {
+		errs = append(errs, ValidationError{Field: "description", Message: "Description must be less than 1000 characters"})
 	}
 
 	// Tag validation
@@ -114,6 +114,13 @@ func ValidateSnippetInput(input *models.SnippetInput) ValidationErrors {
 		}
 	}
 
+	// Validate filenames in files
+	for _, file := range input.Files {
+		if fileErrs := ValidateFilename(file.Filename); fileErrs.HasErrors() {
+			errs = append(errs, fileErrs...)
+		}
+	}
+
 	return errs
 }
 
@@ -124,4 +131,147 @@ func GetAllowedLanguages() []string {
 		languages = append(languages, lang)
 	}
 	return languages
+}
+
+// Allowed editor themes
+var allowedEditorThemes = map[string]bool{
+	"chaos": true, "clouds": true, "clouds_midnight": true, "cobalt": true,
+	"crimson_editor": true, "dawn": true, "dracula": true, "dreamweaver": true,
+	"eclipse": true, "github": true, "gob": true, "gruvbox": true, "idle_fingers": true,
+	"iplastic": true, "katzenmilch": true, "kr_theme": true, "kuroir": true,
+	"merbivore": true, "merbivore_soft": true, "monokai": true, "mono_industrial": true,
+	"nord_dark": true, "one_dark": true, "pastel_on_dark": true, "solarized_dark": true,
+	"solarized_light": true, "sqlserver": true, "terminal": true, "textmate": true,
+	"tomorrow": true, "tomorrow_night": true, "tomorrow_night_blue": true,
+	"tomorrow_night_bright": true, "tomorrow_night_eighties": true, "twilight": true,
+	"vibrant_ink": true, "xcode": true,
+}
+
+// Allowed UI themes
+var allowedUIThemes = map[string]bool{
+	"light": true,
+	"dark":  true,
+}
+
+// ValidateSettingsInput validates settings input
+func ValidateSettingsInput(input *models.SettingsInput) ValidationErrors {
+	var errs ValidationErrors
+
+	// App name validation
+	input.AppName = strings.TrimSpace(input.AppName)
+	if input.AppName != "" && utf8.RuneCountInString(input.AppName) > 100 {
+		errs = append(errs, ValidationError{Field: "app_name", Message: "App name must be less than 100 characters"})
+	}
+
+	// Theme validation (UI theme)
+	input.Theme = strings.ToLower(strings.TrimSpace(input.Theme))
+	if input.Theme != "" && !allowedUIThemes[input.Theme] {
+		errs = append(errs, ValidationError{Field: "theme", Message: "Theme must be 'light' or 'dark'"})
+	}
+
+	// Editor theme validation
+	input.EditorTheme = strings.ToLower(strings.TrimSpace(input.EditorTheme))
+	if input.EditorTheme != "" && !allowedEditorThemes[input.EditorTheme] {
+		errs = append(errs, ValidationError{Field: "editor_theme", Message: "Invalid editor theme"})
+	}
+
+	// Editor font size validation (8-32)
+	if input.EditorFontSize != 0 && (input.EditorFontSize < 8 || input.EditorFontSize > 32) {
+		errs = append(errs, ValidationError{Field: "editor_font_size", Message: "Editor font size must be between 8 and 32"})
+	}
+
+	// Editor tab size validation (1-8)
+	if input.EditorTabSize != 0 && (input.EditorTabSize < 1 || input.EditorTabSize > 8) {
+		errs = append(errs, ValidationError{Field: "editor_tab_size", Message: "Editor tab size must be between 1 and 8"})
+	}
+
+	// Markdown font size validation (8-32)
+	if input.MarkdownFontSize != 0 && (input.MarkdownFontSize < 8 || input.MarkdownFontSize > 32) {
+		errs = append(errs, ValidationError{Field: "markdown_font_size", Message: "Markdown font size must be between 8 and 32"})
+	}
+
+	// Default language validation
+	input.DefaultLanguage = strings.ToLower(strings.TrimSpace(input.DefaultLanguage))
+	if input.DefaultLanguage != "" && !allowedLanguages[input.DefaultLanguage] {
+		errs = append(errs, ValidationError{Field: "default_language", Message: "Invalid default language"})
+	}
+
+	// S3 configuration validation
+	if input.S3Enabled {
+		input.S3Endpoint = strings.TrimSpace(input.S3Endpoint)
+		input.S3Bucket = strings.TrimSpace(input.S3Bucket)
+		input.S3Region = strings.TrimSpace(input.S3Region)
+
+		if input.S3Endpoint == "" {
+			errs = append(errs, ValidationError{Field: "s3_endpoint", Message: "S3 endpoint is required when S3 is enabled"})
+		}
+		if input.S3Bucket == "" {
+			errs = append(errs, ValidationError{Field: "s3_bucket", Message: "S3 bucket is required when S3 is enabled"})
+		}
+		if input.S3Region == "" {
+			errs = append(errs, ValidationError{Field: "s3_region", Message: "S3 region is required when S3 is enabled"})
+		}
+	}
+
+	return errs
+}
+
+// ValidateTagInput validates tag input
+func ValidateTagInput(name string) ValidationErrors {
+	var errs ValidationErrors
+
+	name = strings.TrimSpace(name)
+	if name == "" {
+		errs = append(errs, ValidationError{Field: "name", Message: "Tag name is required"})
+	} else if len(name) > 50 {
+		errs = append(errs, ValidationError{Field: "name", Message: "Tag name must be less than 50 characters"})
+	} else if !tagRegex.MatchString(name) {
+		errs = append(errs, ValidationError{Field: "name", Message: "Tag can only contain letters, numbers, underscores, and hyphens"})
+	}
+
+	return errs
+}
+
+// ValidateFolderInput validates folder input
+func ValidateFolderInput(name string) ValidationErrors {
+	var errs ValidationErrors
+
+	name = strings.TrimSpace(name)
+	if name == "" {
+		errs = append(errs, ValidationError{Field: "name", Message: "Folder name is required"})
+	} else if utf8.RuneCountInString(name) > 100 {
+		errs = append(errs, ValidationError{Field: "name", Message: "Folder name must be less than 100 characters"})
+	}
+
+	return errs
+}
+
+// ValidateTokenInput validates API token input
+func ValidateTokenInput(name string) ValidationErrors {
+	var errs ValidationErrors
+
+	name = strings.TrimSpace(name)
+	if name == "" {
+		errs = append(errs, ValidationError{Field: "name", Message: "Token name is required"})
+	} else if utf8.RuneCountInString(name) > 100 {
+		errs = append(errs, ValidationError{Field: "name", Message: "Token name must be less than 100 characters"})
+	}
+
+	return errs
+}
+
+// ValidateFilename validates a filename for length and basic safety
+func ValidateFilename(filename string) ValidationErrors {
+	var errs ValidationErrors
+
+	filename = strings.TrimSpace(filename)
+	if filename == "" {
+		errs = append(errs, ValidationError{Field: "filename", Message: "Filename is required"})
+	} else if utf8.RuneCountInString(filename) > 255 {
+		errs = append(errs, ValidationError{Field: "filename", Message: "Filename must be less than 255 characters"})
+	} else if strings.Contains(filename, "..") || strings.Contains(filename, "/") || strings.Contains(filename, "\\") {
+		errs = append(errs, ValidationError{Field: "filename", Message: "Filename contains invalid characters"})
+	}
+
+	return errs
 }
