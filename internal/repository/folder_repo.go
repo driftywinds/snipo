@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 
 	"github.com/MohamedElashri/snipo/internal/models"
 )
@@ -85,7 +86,11 @@ func (r *FolderRepository) List(ctx context.Context) ([]models.Folder, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to list folders: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			slog.Error("failed to close rows", "error", err)
+		}
+	}()
 
 	var folders []models.Folder
 	for rows.Next() {
@@ -299,7 +304,11 @@ func (r *FolderRepository) GetSnippetFolders(ctx context.Context, snippetID stri
 	if err != nil {
 		return nil, fmt.Errorf("failed to get snippet folders: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			slog.Error("failed to close rows", "error", err)
+		}
+	}()
 
 	var folders []models.Folder
 	for rows.Next() {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 
 	"github.com/MohamedElashri/snipo/internal/models"
 )
@@ -66,7 +67,11 @@ func (r *HistoryRepository) CreateFileHistory(ctx context.Context, historyID int
 	if err != nil {
 		return fmt.Errorf("failed to prepare file history statement: %w", err)
 	}
-	defer stmt.Close()
+	defer func() {
+		if err := stmt.Close(); err != nil {
+			slog.Error("failed to close statement", "error", err)
+		}
+	}()
 
 	for _, file := range files {
 		_, err := stmt.ExecContext(ctx,
@@ -104,7 +109,11 @@ func (r *HistoryRepository) GetSnippetHistory(ctx context.Context, snippetID str
 	if err != nil {
 		return nil, fmt.Errorf("failed to get snippet history: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			slog.Error("failed to close rows", "error", err)
+		}
+	}()
 
 	var history []models.SnippetHistory
 	for rows.Next() {
@@ -198,7 +207,11 @@ func (r *HistoryRepository) GetHistoryFiles(ctx context.Context, historyID int64
 	if err != nil {
 		return nil, fmt.Errorf("failed to get history files: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			slog.Error("failed to close rows", "error", err)
+		}
+	}()
 
 	var files []models.SnippetFileHistory
 	for rows.Next() {

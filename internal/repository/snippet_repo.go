@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/MohamedElashri/snipo/internal/models"
@@ -294,7 +295,11 @@ func (r *SnippetRepository) List(ctx context.Context, filter models.SnippetFilte
 	if err != nil {
 		return nil, fmt.Errorf("failed to list snippets: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			slog.Error("failed to close rows", "error", err)
+		}
+	}()
 
 	var snippets []models.Snippet
 	for rows.Next() {
@@ -445,7 +450,11 @@ func (r *SnippetRepository) Search(ctx context.Context, query string, limit int)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search snippets: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			slog.Error("failed to close rows", "error", err)
+		}
+	}()
 
 	var snippets []models.Snippet
 	for rows.Next() {

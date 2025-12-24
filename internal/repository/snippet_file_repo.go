@@ -31,7 +31,9 @@ func (r *SnippetFileRepository) GetBySnippetID(ctx context.Context, snippetID st
 	if err != nil {
 		return nil, fmt.Errorf("failed to get snippet files: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close() // Best effort close
+	}()
 
 	var files []models.SnippetFile
 	for rows.Next() {

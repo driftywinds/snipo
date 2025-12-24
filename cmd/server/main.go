@@ -80,7 +80,11 @@ func runServer() {
 		logger.Error("failed to connect to database", "error", err)
 		os.Exit(1)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Error("failed to close database", "error", err)
+		}
+	}()
 
 	// Run migrations
 	ctx := context.Background()
@@ -113,6 +117,7 @@ func runServer() {
 		DB:                 db.DB,
 		Logger:             logger,
 		AuthService:        authService,
+		Config:             cfg, // Pass full config
 		Version:            Version,
 		Commit:             Commit,
 		RateLimit:          cfg.Auth.RateLimit,
@@ -177,7 +182,11 @@ func runMigrations() {
 		logger.Error("failed to connect to database", "error", err)
 		os.Exit(1)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Error("failed to close database", "error", err)
+		}
+	}()
 
 	ctx := context.Background()
 	if err := db.Migrate(ctx); err != nil {
@@ -194,7 +203,9 @@ func checkHealth() {
 	if err != nil {
 		os.Exit(1)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		os.Exit(1)

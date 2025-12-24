@@ -9,39 +9,88 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/MohamedElashri/snipo/internal/auth"
 	"github.com/MohamedElashri/snipo/internal/repository"
 )
 
-// Context keys for authentication
+// Context keys for authentication and request tracking
 type contextKey string
 
 const (
 	// ContextKeyAPIToken is the context key for API token
 	ContextKeyAPIToken contextKey = "api_token"
+	// ContextKeyRequestID is the context key for request ID
+	ContextKeyRequestID contextKey = "request_id"
 )
+
+// API version
+const APIVersion = "1.0"
+
+// RequestID generates a unique request ID for tracking
+func RequestID(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check if request already has an ID (from proxy/load balancer)
+		requestID := r.Header.Get("X-Request-ID")
+		if requestID == "" {
+			// Generate new UUID
+			requestID = uuid.New().String()
+		}
+
+		// Add to response header
+		w.Header().Set("X-Request-ID", requestID)
+
+		// Add to context for use in handlers and logging
+		ctx := context.WithValue(r.Context(), ContextKeyRequestID, requestID)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// GetRequestID retrieves the request ID from context
+func GetRequestID(ctx context.Context) string {
+	if requestID, ok := ctx.Value(ContextKeyRequestID).(string); ok {
+		return requestID
+	}
+	return ""
+}
 
 // SecurityHeaders adds essential security headers to responses
 func SecurityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// API version header
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			w.Header().Set("X-API-Version", APIVersion)
+		}
+
 		// Prevent XSS
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("X-XSS-Protection", "1; mode=block")
 
-		// Content Security Policy - all resources served locally
-		w.Header().Set("Content-Security-Policy", strings.Join([]string{
-			"default-src 'self'",
-			"script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:", // unsafe-eval needed for Alpine.js, blob for Ace workers
-			"style-src 'self' 'unsafe-inline'",
-			"img-src 'self' data: blob:",
-			"font-src 'self'",
-			"connect-src 'self'",
-			"worker-src 'self' blob:", // Allow Ace Editor web workers
-			"frame-ancestors 'none'",
-			"form-action 'self'",
-			"base-uri 'self'",
-		}, "; "))
+		// Content Security Policy - differentiate between API and web routes
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			// Stricter CSP for API-only routes (JSON responses)
+			w.Header().Set("Content-Security-Policy", strings.Join([]string{
+				"default-src 'none'",
+				"frame-ancestors 'none'",
+			}, "; "))
+		} else {
+			// Full CSP for web UI routes
+			w.Header().Set("Content-Security-Policy", strings.Join([]string{
+				"default-src 'self'",
+				"script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:", // unsafe-eval needed for Alpine.js, blob for Ace workers
+				"style-src 'self' 'unsafe-inline'",
+				"img-src 'self' data: blob:",
+				"font-src 'self'",
+				"connect-src 'self'",
+				"worker-src 'self' blob:", // Allow Ace Editor web workers
+				"frame-ancestors 'none'",
+				"form-action 'self'",
+				"base-uri 'self'",
+			}, "; "))
+		}
 
 		// HTTPS enforcement (only in production)
 		w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
@@ -56,7 +105,7 @@ func SecurityHeaders(next http.Handler) http.Handler {
 	})
 }
 
-// Logger logs HTTP requests
+// Logger logs HTTP requests with request ID
 func Logger(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -69,7 +118,11 @@ func Logger(logger *slog.Logger) func(http.Handler) http.Handler {
 
 			duration := time.Since(start)
 
+			// Get request ID from context
+			requestID := GetRequestID(r.Context())
+
 			logger.Info("request",
+				"request_id", requestID,
 				"method", r.Method,
 				"path", r.URL.Path,
 				"status", wrapped.statusCode,
@@ -274,33 +327,51 @@ func getClientIP(r *http.Request) string {
 
 // CORS adds CORS headers for API requests
 // For local-first deployment, CORS is restrictive by default.
-// Only same-origin requests are allowed unless explicitly configured.
-func CORS(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
+// Configure SNIPO_ALLOWED_ORIGINS to allow specific cross-origin requests.
+func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			origin := r.Header.Get("Origin")
 
-		// For local deployment, only allow same-origin or no origin (same-site requests)
-		// If you need cross-origin access, configure allowed origins explicitly
-		if origin != "" {
-			// Check if origin matches the request host (same-origin)
-			// For local deployment, this is typically localhost or the server's address
-			requestHost := r.Host
-			if origin == "http://"+requestHost || origin == "https://"+requestHost {
-				w.Header().Set("Access-Control-Allow-Origin", origin)
-				w.Header().Set("Access-Control-Allow-Credentials", "true")
+			// Check if origin is allowed
+			if origin != "" {
+				allowed := false
+				
+				// Check if wildcard is configured (development mode)
+				for _, allowedOrigin := range allowedOrigins {
+					if allowedOrigin == "*" {
+						w.Header().Set("Access-Control-Allow-Origin", "*")
+						allowed = true
+						break
+					} else if allowedOrigin == origin {
+						w.Header().Set("Access-Control-Allow-Origin", origin)
+						w.Header().Set("Access-Control-Allow-Credentials", "true")
+						allowed = true
+						break
+					}
+				}
+
+				// If not explicitly allowed, check if same-origin
+				if !allowed {
+					requestHost := r.Host
+					if origin == "http://"+requestHost || origin == "https://"+requestHost {
+						w.Header().Set("Access-Control-Allow-Origin", origin)
+						w.Header().Set("Access-Control-Allow-Credentials", "true")
+					}
+					// Otherwise, don't set CORS headers (browser will block cross-origin requests)
+				}
 			}
-			// Otherwise, don't set CORS headers (browser will block cross-origin requests)
-		}
 
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key")
-		w.Header().Set("Access-Control-Max-Age", "86400")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key")
+			w.Header().Set("Access-Control-Max-Age", "86400")
 
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
 
-		next.ServeHTTP(w, r)
-	})
+			next.ServeHTTP(w, r)
+		})
+	}
 }
