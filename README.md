@@ -86,6 +86,24 @@ API documentation:
 - OpenAPI spec: [`docs/openapi.yaml`](docs/openapi.yaml)
 - Interactive docs: `http://localhost:8080/api/v1/openapi.json`
 
+## Security
+
+**Container Security:**
+- Runs as non-root user (UID 1000)
+- Read-only root filesystem
+- All Linux capabilities dropped
+- No privilege escalation allowed
+
+**Production Recommendations:**
+- Use strong passwords (16+ characters)
+- Enable HTTPS via reverse proxy (`Nginx`/`Caddy`/`Traefik`)
+- Configure CORS restrictively (`SNIPO_ALLOWED_ORIGINS`)
+- Use Docker secrets for sensitive values
+- Enable S3 backups with encryption
+- Keep image updated regularly
+
+See [Development Guide](docs/Development.md#security) for detailed security configuration.
+
 ## Development
 
 See the [Development Guide](docs/Development.md) for build instructions, testing, and contribution guidelines.

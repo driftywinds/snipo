@@ -1,0 +1,53 @@
+# Production Docker Compose with enhanced security and resource limits
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  snipo:
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    
+    # Additional security hardening
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:unconfined  # Adjust based on your security requirements
+    
+    # Logging configuration for production
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+    
+    # Health check configuration
+    healthcheck:
+      test: ["CMD", "/snipo", "health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    
+    # Network isolation (recommended for production)
+    # Uncomment to use custom network:
+    # networks:
+    #   - snipo_network
+
+# Optional: Create isolated network for production
+# networks:
+#   snipo_network:
+#     driver: bridge
+#     ipam:
+#       config:
+#         - subnet: 172.28.0.0/16

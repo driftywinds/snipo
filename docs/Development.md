@@ -29,6 +29,86 @@ make docker
 
 # Or with docker build
 docker build -t snipo:local .
+
+# Build with version info
+docker build \
+  --build-arg VERSION=v1.0.0 \
+  --build-arg COMMIT=$(git rev-parse --short HEAD) \
+  -t snipo:v1.0.0 .
+```
+
+## Security
+
+### Docker Security Features
+
+The Docker deployment implements multiple security layers:
+
+**Container Security:**
+- **Non-root user**: Runs as UID 1000 (`snipo` user)
+- **Read-only root filesystem**: Prevents tampering with system files
+- **Dropped capabilities**: All Linux capabilities removed (`cap_drop: ALL`)
+- **No privilege escalation**: `no-new-privileges:true` prevents gaining elevated privileges
+- **Minimal base image**: Alpine Linux 3.20 with only essential packages
+
+**Filesystem Security:**
+- Binary owned by root with 755 permissions (executable but not writable)
+- Data directory (`/data`) owned by snipo user
+- Temporary storage via tmpfs (10MB limit, automatically cleared)
+- Volume mount for persistent data only
+
+**Network Security:**
+- No privileged ports required (uses 8080)
+- Container-to-container isolation via Docker networks
+- CORS configuration for cross-origin access control
+
+**Resource Limits:**
+You can add resource constraints in docker-compose.yml:
+```yaml
+services:
+  snipo:
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+```
+
+### Production Deployment Checklist
+
+- [ ] Use strong `SNIPO_MASTER_PASSWORD` (16+ characters, mixed case, numbers, symbols)
+- [ ] Generate random `SNIPO_SESSION_SECRET` (use `openssl rand -hex 32`)
+- [ ] Enable HTTPS (use reverse proxy like Nginx/Caddy/Traefik)
+- [ ] Configure `SNIPO_TRUST_PROXY=true` if behind proxy
+- [ ] Set restrictive `SNIPO_ALLOWED_ORIGINS` for CORS
+- [ ] Use Docker secrets for sensitive environment variables
+- [ ] Enable S3 backups with encryption
+- [ ] Set up monitoring and health checks
+- [ ] Configure log aggregation (`SNIPO_LOG_FORMAT=json`)
+- [ ] Keep Docker image updated regularly
+- [ ] Review and adjust rate limits based on usage
+
+### Using Docker Secrets (Recommended for Production)
+
+Instead of plain environment variables, use Docker secrets:
+
+```yaml
+services:
+  snipo:
+    secrets:
+      - snipo_password
+      - snipo_session_secret
+    environment:
+      - SNIPO_MASTER_PASSWORD_FILE=/run/secrets/snipo_password
+      - SNIPO_SESSION_SECRET_FILE=/run/secrets/snipo_session_secret
+
+secrets:
+  snipo_password:
+    file: ./secrets/password.txt
+  snipo_session_secret:
+    file: ./secrets/session_secret.txt
 ```
 
 ## Running
