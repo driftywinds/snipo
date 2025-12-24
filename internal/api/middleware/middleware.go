@@ -327,33 +327,51 @@ func getClientIP(r *http.Request) string {
 
 // CORS adds CORS headers for API requests
 // For local-first deployment, CORS is restrictive by default.
-// Only same-origin requests are allowed unless explicitly configured.
-func CORS(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
+// Configure SNIPO_ALLOWED_ORIGINS to allow specific cross-origin requests.
+func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			origin := r.Header.Get("Origin")
 
-		// For local deployment, only allow same-origin or no origin (same-site requests)
-		// If you need cross-origin access, configure allowed origins explicitly
-		if origin != "" {
-			// Check if origin matches the request host (same-origin)
-			// For local deployment, this is typically localhost or the server's address
-			requestHost := r.Host
-			if origin == "http://"+requestHost || origin == "https://"+requestHost {
-				w.Header().Set("Access-Control-Allow-Origin", origin)
-				w.Header().Set("Access-Control-Allow-Credentials", "true")
+			// Check if origin is allowed
+			if origin != "" {
+				allowed := false
+				
+				// Check if wildcard is configured (development mode)
+				for _, allowedOrigin := range allowedOrigins {
+					if allowedOrigin == "*" {
+						w.Header().Set("Access-Control-Allow-Origin", "*")
+						allowed = true
+						break
+					} else if allowedOrigin == origin {
+						w.Header().Set("Access-Control-Allow-Origin", origin)
+						w.Header().Set("Access-Control-Allow-Credentials", "true")
+						allowed = true
+						break
+					}
+				}
+
+				// If not explicitly allowed, check if same-origin
+				if !allowed {
+					requestHost := r.Host
+					if origin == "http://"+requestHost || origin == "https://"+requestHost {
+						w.Header().Set("Access-Control-Allow-Origin", origin)
+						w.Header().Set("Access-Control-Allow-Credentials", "true")
+					}
+					// Otherwise, don't set CORS headers (browser will block cross-origin requests)
+				}
 			}
-			// Otherwise, don't set CORS headers (browser will block cross-origin requests)
-		}
 
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key")
-		w.Header().Set("Access-Control-Max-Age", "86400")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key")
+			w.Header().Set("Access-Control-Max-Age", "86400")
 
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
 
-		next.ServeHTTP(w, r)
-	})
+			next.ServeHTTP(w, r)
+		})
+	}
 }

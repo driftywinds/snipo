@@ -117,6 +117,7 @@ func runServer() {
 		DB:                 db.DB,
 		Logger:             logger,
 		AuthService:        authService,
+		Config:             cfg, // Pass full config
 		Version:            Version,
 		Commit:             Commit,
 		RateLimit:          cfg.Auth.RateLimit,

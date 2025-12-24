@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"runtime"
 	"time"
+
+	"github.com/MohamedElashri/snipo/internal/config"
 )
 
 // HealthHandler handles health check requests
@@ -13,15 +15,17 @@ type HealthHandler struct {
 	startTime time.Time
 	version   string
 	commit    string
+	features  *config.FeatureFlags
 }
 
 // NewHealthHandler creates a new health handler
-func NewHealthHandler(db *sql.DB, version, commit string) *HealthHandler {
+func NewHealthHandler(db *sql.DB, version, commit string, features *config.FeatureFlags) *HealthHandler {
 	return &HealthHandler{
 		db:        db,
 		startTime: time.Now(),
 		version:   version,
 		commit:    commit,
+		features:  features,
 	}
 }
 
@@ -33,7 +37,16 @@ type HealthResponse struct {
 	Uptime    string            `json:"uptime"`
 	Checks    map[string]string `json:"checks"`
 	Memory    MemoryStats       `json:"memory"`
+	Features  *FeatureFlags     `json:"features,omitempty"`
 	Timestamp string            `json:"timestamp"`
+}
+
+// FeatureFlags represents enabled features
+type FeatureFlags struct {
+	PublicSnippets bool `json:"public_snippets"`
+	S3Sync         bool `json:"s3_sync"`
+	APITokens      bool `json:"api_tokens"`
+	BackupRestore  bool `json:"backup_restore"`
 }
 
 // MemoryStats represents memory statistics
@@ -74,6 +87,16 @@ func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 			NumGC:      m.NumGC,
 		},
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
+	}
+
+	// Add feature flags if available
+	if h.features != nil {
+		response.Features = &FeatureFlags{
+			PublicSnippets: h.features.PublicSnippets,
+			S3Sync:         h.features.S3Sync,
+			APITokens:      h.features.APITokens,
+			BackupRestore:  h.features.BackupRestore,
+		}
 	}
 
 	if status == "healthy" {

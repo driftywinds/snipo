@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -16,6 +17,8 @@ type Config struct {
 	Auth     AuthConfig
 	S3       S3Config
 	Logging  LoggingConfig
+	API      APIConfig
+	Features FeatureFlags
 }
 
 // ServerConfig holds HTTP server settings
@@ -62,6 +65,22 @@ type S3Config struct {
 type LoggingConfig struct {
 	Level  string
 	Format string
+}
+
+// APIConfig holds API-specific settings
+type APIConfig struct {
+	AllowedOrigins []string // CORS allowed origins
+	RateLimitRead  int      // requests per hour for read operations
+	RateLimitWrite int      // requests per hour for write operations
+	RateLimitAdmin int      // requests per hour for admin operations
+}
+
+// FeatureFlags holds feature toggle settings
+type FeatureFlags struct {
+	PublicSnippets bool
+	S3Sync         bool
+	APITokens      bool
+	BackupRestore  bool
 }
 
 // Load reads configuration from environment variables
@@ -115,6 +134,27 @@ func Load() (*Config, error) {
 	// Logging
 	cfg.Logging.Level = getEnv("SNIPO_LOG_LEVEL", "info")
 	cfg.Logging.Format = getEnv("SNIPO_LOG_FORMAT", "json")
+
+	// API
+	originsStr := getEnv("SNIPO_ALLOWED_ORIGINS", "*")
+	if originsStr == "*" {
+		cfg.API.AllowedOrigins = []string{"*"}
+	} else {
+		cfg.API.AllowedOrigins = strings.Split(originsStr, ",")
+		// Trim whitespace from each origin
+		for i, origin := range cfg.API.AllowedOrigins {
+			cfg.API.AllowedOrigins[i] = strings.TrimSpace(origin)
+		}
+	}
+	cfg.API.RateLimitRead = getEnvInt("SNIPO_RATE_LIMIT_READ", 1000)
+	cfg.API.RateLimitWrite = getEnvInt("SNIPO_RATE_LIMIT_WRITE", 500)
+	cfg.API.RateLimitAdmin = getEnvInt("SNIPO_RATE_LIMIT_ADMIN", 100)
+
+	// Feature Flags
+	cfg.Features.PublicSnippets = getEnvBool("SNIPO_ENABLE_PUBLIC_SNIPPETS", true)
+	cfg.Features.S3Sync = cfg.S3.Enabled // S3Sync follows S3.Enabled
+	cfg.Features.APITokens = getEnvBool("SNIPO_ENABLE_API_TOKENS", true)
+	cfg.Features.BackupRestore = getEnvBool("SNIPO_ENABLE_BACKUP_RESTORE", true)
 
 	return cfg, nil
 }

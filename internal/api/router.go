@@ -23,6 +23,7 @@ type RouterConfig struct {
 	DB                 *sql.DB
 	Logger             *slog.Logger
 	AuthService        *auth.Service
+	Config             *config.Config // Full application config
 	Version            string
 	Commit             string
 	RateLimit          int
@@ -40,16 +41,28 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	r.Use(middleware.Recovery(cfg.Logger))   // Catch panics
 	r.Use(middleware.Logger(cfg.Logger))     // Log requests (includes request ID)
 	r.Use(middleware.SecurityHeaders)        // Security headers (includes X-API-Version)
-	r.Use(middleware.CORS)                   // CORS handling
+	
+	// Use configured CORS
+	allowedOrigins := []string{"*"} // default
+	if cfg.Config != nil {
+		allowedOrigins = cfg.Config.API.AllowedOrigins
+	}
+	r.Use(middleware.CORS(allowedOrigins)) // CORS handling
 
 	// Rate limiting for auth endpoints
 	authRateLimiter := middleware.NewRateLimiter(cfg.RateLimit, 60*1000*1000*1000) // 1 minute in nanoseconds
 
-	// API rate limiter with permission-based limits
+	// API rate limiter with permission-based limits (use config values or defaults)
+	readLimit, writeLimit, adminLimit := 1000, 500, 100
+	if cfg.Config != nil {
+		readLimit = cfg.Config.API.RateLimitRead
+		writeLimit = cfg.Config.API.RateLimitWrite
+		adminLimit = cfg.Config.API.RateLimitAdmin
+	}
 	apiRateLimiter := middleware.NewAPIRateLimiter(middleware.RateLimitConfig{
-		ReadLimit:  1000, // 1000 requests per hour for read operations
-		WriteLimit: 500,  // 500 requests per hour for write operations
-		AdminLimit: 100,  // 100 requests per hour for admin operations
+		ReadLimit:  readLimit,
+		WriteLimit: writeLimit,
+		AdminLimit: adminLimit,
 		Window:     time.Hour,
 	})
 
@@ -99,7 +112,14 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	folderHandler := handlers.NewFolderHandler(folderRepo)
 	tokenHandler := handlers.NewTokenHandler(tokenRepo)
 	authHandler := handlers.NewAuthHandler(cfg.AuthService)
-	healthHandler := handlers.NewHealthHandler(cfg.DB, cfg.Version, cfg.Commit)
+	
+	// Create health handler with feature flags
+	var featureFlags *config.FeatureFlags
+	if cfg.Config != nil {
+		featureFlags = &cfg.Config.Features
+	}
+	healthHandler := handlers.NewHealthHandler(cfg.DB, cfg.Version, cfg.Commit, featureFlags)
+	
 	backupHandler := handlers.NewBackupHandler(backupService, s3SyncService)
 	settingsHandler := handlers.NewSettingsHandler(settingsRepo)
 
@@ -108,6 +128,11 @@ func NewRouter(cfg RouterConfig) http.Handler {
 		// Health checks
 		r.Get("/health", healthHandler.Health)
 		r.Get("/ping", healthHandler.Ping)
+
+		// OpenAPI specification
+		r.Get("/api/v1/openapi.json", func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, "docs/openapi.yaml")
+		})
 
 		// Public snippet access
 		r.Get("/api/v1/snippets/public/{id}", snippetHandler.GetPublic)
