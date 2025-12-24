@@ -46,6 +46,8 @@ export SNIPO_SESSION_SECRET=$(openssl rand -hex 32)
 
 ## Configuration
 
+### Essential
+
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `SNIPO_MASTER_PASSWORD` | Yes | - | Login password |
@@ -53,15 +55,36 @@ export SNIPO_SESSION_SECRET=$(openssl rand -hex 32)
 | `SNIPO_PORT` | No | `8080` | Server port |
 | `SNIPO_DB_PATH` | No | `./data/snipo.db` | SQLite database path |
 
+### API Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SNIPO_RATE_LIMIT_READ` | `1000` | API read operations (per hour) |
+| `SNIPO_RATE_LIMIT_WRITE` | `500` | API write operations (per hour) |
+| `SNIPO_RATE_LIMIT_ADMIN` | `100` | API admin operations (per hour) |
+| `SNIPO_ALLOWED_ORIGINS` | - | CORS allowed origins (comma-separated) |
+| `SNIPO_ENABLE_PUBLIC_SNIPPETS` | `true` | Enable public snippet sharing |
+| `SNIPO_ENABLE_API_TOKENS` | `true` | Enable API token creation |
+| `SNIPO_ENABLE_BACKUP_RESTORE` | `true` | Enable backup/restore |
+
 See [`.env.example`](.env.example) for all available options including S3 backup configuration.
 
 ## API
 
-Create API tokens in Settings → API Tokens. Authenticate via:
+Create API tokens in Settings → API Tokens with granular permissions:
+- **read**: View snippets, tags, folders
+- **write**: Create, update, delete resources
+- **admin**: Full access including settings
+
+Authenticate via:
 - `Authorization: Bearer <token>`
 - `X-API-Key: <key>`
 
-Full API documentation: [`docs/openapi.yaml`](docs/openapi.yaml)
+All responses include metadata (request ID, timestamp, version) and pagination for lists.
+
+API documentation:
+- OpenAPI spec: [`docs/openapi.yaml`](docs/openapi.yaml)
+- Interactive docs: `http://localhost:8080/api/v1/openapi.json`
 
 ## Development
 

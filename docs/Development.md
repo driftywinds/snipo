@@ -101,8 +101,20 @@ All configuration is via environment variables. See [`.env.example`](../.env.exa
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SNIPO_RATE_LIMIT` | `100` | Requests per window |
+| `SNIPO_RATE_LIMIT` | `100` | Login requests per window |
 | `SNIPO_RATE_WINDOW` | `1m` | Rate limit window duration |
+| `SNIPO_RATE_LIMIT_READ` | `1000` | API read operations (per hour) |
+| `SNIPO_RATE_LIMIT_WRITE` | `500` | API write operations (per hour) |
+| `SNIPO_RATE_LIMIT_ADMIN` | `100` | API admin operations (per hour) |
+
+### API Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SNIPO_ALLOWED_ORIGINS` | - | CORS allowed origins (comma-separated), use `*` for dev |
+| `SNIPO_ENABLE_PUBLIC_SNIPPETS` | `true` | Enable public snippet sharing |
+| `SNIPO_ENABLE_API_TOKENS` | `true` | Enable API token creation |
+| `SNIPO_ENABLE_BACKUP_RESTORE` | `true` | Enable backup/restore features |
 
 ### S3 Backup
 
@@ -144,16 +156,71 @@ The API follows `RESTful` conventions. See [`docs/openapi.yaml`](openapi.yaml) f
 ### Authentication
 
 API requests require one of:
-- Session cookie (from web login)
+- Session cookie (from web login) - full admin access
 - Bearer token: `Authorization: Bearer <token>`
 - API key header: `X-API-Key: <key>`
 
 Create API tokens via Settings → API Tokens in the web UI.
 
+### Token Permissions
+
+API tokens have three permission levels:
+- **read**: Can only access GET endpoints (view snippets, tags, folders)
+- **write**: Can create, update, and delete snippets, tags, and folders
+- **admin**: Full access including token management, settings, and backups
+
+### Rate Limits
+
+API endpoints are rate-limited per token:
+- Read operations: 1000 requests/hour (configurable)
+- Write operations: 500 requests/hour (configurable)
+- Admin operations: 100 requests/hour (configurable)
+
+Rate limit info is included in response headers:
+- `X-RateLimit-Limit`: Maximum requests allowed
+- `X-RateLimit-Remaining`: Requests remaining
+- `X-RateLimit-Reset`: Unix timestamp when limit resets
+- `Retry-After`: Seconds to wait (when limit exceeded)
+
+### Response Format
+
+All API responses use standardized envelopes:
+
+**Single resource:**
+```json
+{
+  "data": {...},
+  "meta": {
+    "request_id": "uuid",
+    "timestamp": "2024-12-24T10:30:00Z",
+    "version": "1.0"
+  }
+}
+```
+
+**List with pagination:**
+```json
+{
+  "data": [...],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 150,
+    "total_pages": 8,
+    "links": {
+      "self": "/api/v1/snippets?page=1",
+      "next": "/api/v1/snippets?page=2",
+      "prev": null
+    }
+  },
+  "meta": {...}
+}
+```
+
 ### Example Requests
 
 ```bash
-# Create snippet
+# Create snippet (returns {data: {...}, meta: {...}})
 curl -X POST http://localhost:8080/api/v1/snippets \
   -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
@@ -162,6 +229,10 @@ curl -X POST http://localhost:8080/api/v1/snippets \
     "files": [{"filename": "main.go", "content": "package main", "language": "go"}]
   }'
 
+# List snippets with pagination
+curl "http://localhost:8080/api/v1/snippets?page=1&limit=20" \
+  -H "Authorization: Bearer TOKEN"
+
 # Search snippets
 curl "http://localhost:8080/api/v1/snippets/search?q=example" \
   -H "Authorization: Bearer TOKEN"
@@ -169,7 +240,12 @@ curl "http://localhost:8080/api/v1/snippets/search?q=example" \
 # Export backup
 curl -o backup.json "http://localhost:8080/api/v1/backup/export" \
   -H "Authorization: Bearer TOKEN"
+
+# Get API documentation
+curl http://localhost:8080/api/v1/openapi.json
 ```
+
+**Note:** All responses are wrapped in envelopes. Access data via `response.data` instead of directly using the response body.
 
 ## Releasing
 
