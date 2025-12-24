@@ -3,10 +3,28 @@ services:
     image: ghcr.io/mohamedelashri/snipo:latest
     container_name: snipo
     restart: unless-stopped
+    # Security: Container runs as non-root user (UID 1000) with:
+    # - Read-only root filesystem
+    # - All Linux capabilities dropped
+    # - No privilege escalation allowed
     ports:
       - "8080:8080"
     volumes:
       - snipo_data:/data
+      # Temporary directory for read-only root filesystem
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          size: 10485760  # 10MB
+          mode: 1777
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    # User mapping (runs as UID 1000 inside container)
+    user: "1000:1000"
     environment:
       # Required: Set a master password
       - SNIPO_MASTER_PASSWORD=${SNIPO_MASTER_PASSWORD:-<Put_your_master_password_here>}
@@ -17,6 +35,16 @@ services:
       - SNIPO_PORT=8080
       - SNIPO_LOG_LEVEL=info
       - SNIPO_LOG_FORMAT=json
+      # Optional: API rate limiting (requests per hour)
+      - SNIPO_RATE_LIMIT_READ=1000
+      - SNIPO_RATE_LIMIT_WRITE=500
+      - SNIPO_RATE_LIMIT_ADMIN=100
+      # Optional: CORS configuration (comma-separated origins or * for dev)
+      # - SNIPO_ALLOWED_ORIGINS=http://localhost:3000,https://app.example.com
+      # Optional: Feature flags
+      - SNIPO_ENABLE_PUBLIC_SNIPPETS=true
+      - SNIPO_ENABLE_API_TOKENS=true
+      - SNIPO_ENABLE_BACKUP_RESTORE=true
       # Optional: S3 backup configuration
       # - SNIPO_S3_ENABLED=true
       # - SNIPO_S3_ENDPOINT=s3.amazonaws.com

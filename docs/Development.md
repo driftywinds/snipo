@@ -29,6 +29,86 @@ make docker
 
 # Or with docker build
 docker build -t snipo:local .
+
+# Build with version info
+docker build \
+  --build-arg VERSION=v1.0.0 \
+  --build-arg COMMIT=$(git rev-parse --short HEAD) \
+  -t snipo:v1.0.0 .
+```
+
+## Security
+
+### Docker Security Features
+
+The Docker deployment implements multiple security layers:
+
+**Container Security:**
+- **Non-root user**: Runs as UID 1000 (`snipo` user)
+- **Read-only root filesystem**: Prevents tampering with system files
+- **Dropped capabilities**: All Linux capabilities removed (`cap_drop: ALL`)
+- **No privilege escalation**: `no-new-privileges:true` prevents gaining elevated privileges
+- **Minimal base image**: Alpine Linux 3.20 with only essential packages
+
+**Filesystem Security:**
+- Binary owned by root with 755 permissions (executable but not writable)
+- Data directory (`/data`) owned by snipo user
+- Temporary storage via tmpfs (10MB limit, automatically cleared)
+- Volume mount for persistent data only
+
+**Network Security:**
+- No privileged ports required (uses 8080)
+- Container-to-container isolation via Docker networks
+- CORS configuration for cross-origin access control
+
+**Resource Limits:**
+You can add resource constraints in docker-compose.yml:
+```yaml
+services:
+  snipo:
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+```
+
+### Production Deployment Checklist
+
+- [ ] Use strong `SNIPO_MASTER_PASSWORD` (16+ characters, mixed case, numbers, symbols)
+- [ ] Generate random `SNIPO_SESSION_SECRET` (use `openssl rand -hex 32`)
+- [ ] Enable HTTPS (use reverse proxy like Nginx/Caddy/Traefik)
+- [ ] Configure `SNIPO_TRUST_PROXY=true` if behind proxy
+- [ ] Set restrictive `SNIPO_ALLOWED_ORIGINS` for CORS
+- [ ] Use Docker secrets for sensitive environment variables
+- [ ] Enable S3 backups with encryption
+- [ ] Set up monitoring and health checks
+- [ ] Configure log aggregation (`SNIPO_LOG_FORMAT=json`)
+- [ ] Keep Docker image updated regularly
+- [ ] Review and adjust rate limits based on usage
+
+### Using Docker Secrets (Recommended for Production)
+
+Instead of plain environment variables, use Docker secrets:
+
+```yaml
+services:
+  snipo:
+    secrets:
+      - snipo_password
+      - snipo_session_secret
+    environment:
+      - SNIPO_MASTER_PASSWORD_FILE=/run/secrets/snipo_password
+      - SNIPO_SESSION_SECRET_FILE=/run/secrets/snipo_session_secret
+
+secrets:
+  snipo_password:
+    file: ./secrets/password.txt
+  snipo_session_secret:
+    file: ./secrets/session_secret.txt
 ```
 
 ## Running
@@ -101,8 +181,20 @@ All configuration is via environment variables. See [`.env.example`](../.env.exa
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SNIPO_RATE_LIMIT` | `100` | Requests per window |
+| `SNIPO_RATE_LIMIT` | `100` | Login requests per window |
 | `SNIPO_RATE_WINDOW` | `1m` | Rate limit window duration |
+| `SNIPO_RATE_LIMIT_READ` | `1000` | API read operations (per hour) |
+| `SNIPO_RATE_LIMIT_WRITE` | `500` | API write operations (per hour) |
+| `SNIPO_RATE_LIMIT_ADMIN` | `100` | API admin operations (per hour) |
+
+### API Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SNIPO_ALLOWED_ORIGINS` | - | CORS allowed origins (comma-separated), use `*` for dev |
+| `SNIPO_ENABLE_PUBLIC_SNIPPETS` | `true` | Enable public snippet sharing |
+| `SNIPO_ENABLE_API_TOKENS` | `true` | Enable API token creation |
+| `SNIPO_ENABLE_BACKUP_RESTORE` | `true` | Enable backup/restore features |
 
 ### S3 Backup
 
@@ -144,16 +236,71 @@ The API follows `RESTful` conventions. See [`docs/openapi.yaml`](openapi.yaml) f
 ### Authentication
 
 API requests require one of:
-- Session cookie (from web login)
+- Session cookie (from web login) - full admin access
 - Bearer token: `Authorization: Bearer <token>`
 - API key header: `X-API-Key: <key>`
 
 Create API tokens via Settings → API Tokens in the web UI.
 
+### Token Permissions
+
+API tokens have three permission levels:
+- **read**: Can only access GET endpoints (view snippets, tags, folders)
+- **write**: Can create, update, and delete snippets, tags, and folders
+- **admin**: Full access including token management, settings, and backups
+
+### Rate Limits
+
+API endpoints are rate-limited per token:
+- Read operations: 1000 requests/hour (configurable)
+- Write operations: 500 requests/hour (configurable)
+- Admin operations: 100 requests/hour (configurable)
+
+Rate limit info is included in response headers:
+- `X-RateLimit-Limit`: Maximum requests allowed
+- `X-RateLimit-Remaining`: Requests remaining
+- `X-RateLimit-Reset`: Unix timestamp when limit resets
+- `Retry-After`: Seconds to wait (when limit exceeded)
+
+### Response Format
+
+All API responses use standardized envelopes:
+
+**Single resource:**
+```json
+{
+  "data": {...},
+  "meta": {
+    "request_id": "uuid",
+    "timestamp": "2024-12-24T10:30:00Z",
+    "version": "1.0"
+  }
+}
+```
+
+**List with pagination:**
+```json
+{
+  "data": [...],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 150,
+    "total_pages": 8,
+    "links": {
+      "self": "/api/v1/snippets?page=1",
+      "next": "/api/v1/snippets?page=2",
+      "prev": null
+    }
+  },
+  "meta": {...}
+}
+```
+
 ### Example Requests
 
 ```bash
-# Create snippet
+# Create snippet (returns {data: {...}, meta: {...}})
 curl -X POST http://localhost:8080/api/v1/snippets \
   -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
@@ -162,6 +309,10 @@ curl -X POST http://localhost:8080/api/v1/snippets \
     "files": [{"filename": "main.go", "content": "package main", "language": "go"}]
   }'
 
+# List snippets with pagination
+curl "http://localhost:8080/api/v1/snippets?page=1&limit=20" \
+  -H "Authorization: Bearer TOKEN"
+
 # Search snippets
 curl "http://localhost:8080/api/v1/snippets/search?q=example" \
   -H "Authorization: Bearer TOKEN"
@@ -169,7 +320,12 @@ curl "http://localhost:8080/api/v1/snippets/search?q=example" \
 # Export backup
 curl -o backup.json "http://localhost:8080/api/v1/backup/export" \
   -H "Authorization: Bearer TOKEN"
+
+# Get API documentation
+curl http://localhost:8080/api/v1/openapi.json
 ```
+
+**Note:** All responses are wrapped in envelopes. Access data via `response.data` instead of directly using the response body.
 
 ## Releasing
 

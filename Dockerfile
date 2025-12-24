@@ -35,14 +35,20 @@ FROM alpine:3.20
 # Install ca-certificates for HTTPS and create non-root user
 RUN apk add --no-cache ca-certificates tzdata \
     && adduser -D -u 1000 snipo \
-    && mkdir -p /data \
-    && chown -R snipo:snipo /data
+    && mkdir -p /data /tmp \
+    && chown -R snipo:snipo /data /tmp
 
-# Copy the binary
-COPY --from=builder /snipo /snipo
+# Copy the binary with proper permissions
+COPY --from=builder --chown=root:root --chmod=755 /snipo /snipo
 
 # Create data directory structure
 WORKDIR /data
+
+# Add security labels
+LABEL org.opencontainers.image.source="https://github.com/MohamedElashri/snipo" \
+      org.opencontainers.image.description="Self-hosted snippet manager" \
+      org.opencontainers.image.licenses="GPL-3.0" \
+      org.opencontainers.image.vendor="Mohamed Elashri"
 
 # Expose the default port
 EXPOSE 8080
