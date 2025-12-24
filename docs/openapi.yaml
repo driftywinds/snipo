@@ -137,7 +137,8 @@ paths:
             text/plain:
               schema:
                 type: string
-                example: pong
+                examples:
+                  - pong
 
   /health:
     get:
@@ -172,7 +173,8 @@ paths:
             Set-Cookie:
               schema:
                 type: string
-                example: snipo_session=abc123; Path=/; HttpOnly; SameSite=Lax
+                examples:
+                  - snipo_session=abc123; Path=/; HttpOnly; SameSite=Lax
           content:
             application/json:
               schema:
@@ -214,7 +216,8 @@ paths:
                 properties:
                   authenticated:
                     type: boolean
-                    example: true
+                    examples:
+                      - true
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -244,10 +247,12 @@ paths:
                 properties:
                   success:
                     type: boolean
-                    example: true
+                    examples:
+                      - true
                   message:
                     type: string
-                    example: Password changed successfully
+                    examples:
+                      - Password changed successfully
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -497,10 +502,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-              example:
-                error:
-                  code: "INVALID_REQUEST"
-                  message: "Request body is required"
+              examples:
+                invalid_request:
+                  value:
+                    error:
+                      code: "INVALID_REQUEST"
+                      message: "Request body is required"
         '401':
           $ref: '#/components/responses/Unauthorized'
         '422':
@@ -1215,8 +1222,7 @@ paths:
               type: object
               properties:
                 parent_id:
-                  type: integer
-                  nullable: true
+                  type: [integer, "null"]
                   description: New parent folder ID (null for root)
       responses:
         '200':
@@ -1584,7 +1590,8 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: Backup deleted successfully
+                    examples:
+                      - Backup deleted successfully
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1761,10 +1768,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-              example:
-                error:
-                  code: "ADMIN_REQUIRED"
-                  message: "This operation requires admin-level permissions"
+              examples:
+                admin_required:
+                  value:
+                    error:
+                      code: "ADMIN_REQUIRED"
+                      message: "This operation requires admin-level permissions"
 
   /api/v1/openapi.json:
     get:
@@ -1851,15 +1860,17 @@ components:
             code:
               type: string
               description: Machine-readable error code (see description for full list)
-              example: "UNAUTHORIZED"
+              examples:
+                - "UNAUTHORIZED"
             message:
               type: string
               description: Human-readable error message
-              example: "Authentication required"
-      example:
-        error:
-          code: "FORBIDDEN"
-          message: "Insufficient permissions to perform this action"
+              examples:
+                - "Authentication required"
+      examples:
+        - error:
+            code: "FORBIDDEN"
+            message: "Insufficient permissions to perform this action"
 
     ValidationError:
       type: object
@@ -1913,11 +1924,13 @@ components:
             code:
               type: string
               description: Error code (typically VALIDATION_ERROR)
-              example: "VALIDATION_ERROR"
+              examples:
+                - "VALIDATION_ERROR"
             message:
               type: string
               description: Human-readable error summary
-              example: "Validation failed"
+              examples:
+                - "Validation failed"
             details:
               type: array
               description: Array of field-specific validation errors
@@ -1927,20 +1940,22 @@ components:
                   field:
                     type: string
                     description: Name of the field that failed validation
-                    example: "title"
+                    examples:
+                      - "title"
                   message:
                     type: string
                     description: Specific validation error for this field
-                    example: "Title must not be empty"
-      example:
-        error:
-          code: "VALIDATION_ERROR"
-          message: "Validation failed"
-          details:
-            - field: "title"
-              message: "Title must not be empty"
-            - field: "font_size"
-              message: "Font size must be between 8 and 32"
+                    examples:
+                      - "Title must not be empty"
+      examples:
+        - error:
+            code: "VALIDATION_ERROR"
+            message: "Validation failed"
+            details:
+              - field: "title"
+                message: "Title must not be empty"
+              - field: "font_size"
+                message: "Font size must be between 8 and 32"
 
     # Standard Response Envelope
     Meta:
@@ -1951,16 +1966,19 @@ components:
           type: string
           format: uuid
           description: Unique request identifier for tracking and debugging
-          example: "550e8400-e29b-41d4-a716-446655440000"
+          examples:
+            - "550e8400-e29b-41d4-a716-446655440000"
         timestamp:
           type: string
           format: date-time
           description: UTC timestamp of the response
-          example: "2024-12-24T10:30:00Z"
+          examples:
+            - "2024-12-24T10:30:00Z"
         version:
           type: string
           description: API version
-          example: "1.0"
+          examples:
+            - "1.0"
 
     PaginationLinks:
       type: object
@@ -1969,17 +1987,18 @@ components:
         self:
           type: string
           description: Link to current page
-          example: "/api/v1/snippets?page=1&limit=20"
+          examples:
+            - "/api/v1/snippets?page=1&limit=20"
         next:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Link to next page (null if on last page)
-          example: "/api/v1/snippets?page=2&limit=20"
+          examples:
+            - "/api/v1/snippets?page=2&limit=20"
         prev:
-          type: string
-          nullable: true
+          type: [string, "null"]
           description: Link to previous page (null if on first page)
-          example: null
+          examples:
+            - null
 
     Pagination:
       type: object
@@ -1988,19 +2007,23 @@ components:
         page:
           type: integer
           description: Current page number (1-indexed)
-          example: 1
+          examples:
+            - 1
         limit:
           type: integer
           description: Number of items per page
-          example: 20
+          examples:
+            - 20
         total:
           type: integer
           description: Total number of items
-          example: 150
+          examples:
+            - 150
         total_pages:
           type: integer
           description: Total number of pages
-          example: 8
+          examples:
+            - 8
         links:
           $ref: '#/components/schemas/PaginationLinks'
 
@@ -2050,22 +2073,27 @@ components:
       properties:
         status:
           type: string
-          example: healthy
+          examples:
+            - healthy
         version:
           type: string
-          example: 1.0.0
+          examples:
+            - 1.0.0
         commit:
           type: string
-          example: abc1234
+          examples:
+            - abc1234
         uptime:
           type: string
-          example: "24h30m15s"
+          examples:
+            - "24h30m15s"
         checks:
           type: object
           properties:
             database:
               type: string
-              example: healthy
+              examples:
+                - healthy
         memory:
           type: object
           properties:
@@ -2113,19 +2141,23 @@ components:
       properties:
         id:
           type: string
-          example: a1b2c3d4e5f6
+          examples:
+            - a1b2c3d4e5f6
         title:
           type: string
-          example: Docker Compose Template
+          examples:
+            - Docker Compose Template
         description:
           type: string
-          example: Basic multi-container setup
+          examples:
+            - Basic multi-container setup
         content:
           type: string
           description: Primary file content (legacy)
         language:
           type: string
-          example: yaml
+          examples:
+            - yaml
         is_favorite:
           type: boolean
         is_public:
@@ -2158,12 +2190,14 @@ components:
           type: integer
         filename:
           type: string
-          example: main.js
+          examples:
+            - main.js
         content:
           type: string
         language:
           type: string
-          example: javascript
+          examples:
+            - javascript
         sort_order:
           type: integer
 
@@ -2189,8 +2223,7 @@ components:
             type: string
           description: Tag names (auto-created if not exist)
         folder_id:
-          type: integer
-          nullable: true
+          type: [integer, "null"]
         is_public:
           type: boolean
           default: false
@@ -2224,18 +2257,6 @@ components:
         pagination:
           $ref: '#/components/schemas/Pagination'
 
-    Pagination:
-      type: object
-      properties:
-        page:
-          type: integer
-        limit:
-          type: integer
-        total:
-          type: integer
-        total_pages:
-          type: integer
-
     Tag:
       type: object
       properties:
@@ -2243,10 +2264,12 @@ components:
           type: integer
         name:
           type: string
-          example: docker
+          examples:
+            - docker
         color:
           type: string
-          example: "#0db7ed"
+          examples:
+            - "#0db7ed"
         created_at:
           type: string
           format: date-time
@@ -2272,10 +2295,10 @@ components:
           type: integer
         name:
           type: string
-          example: DevOps
+          examples:
+            - DevOps
         parent_id:
-          type: integer
-          nullable: true
+          type: [integer, "null"]
         icon:
           type: string
           default: folder
@@ -2300,8 +2323,7 @@ components:
           type: string
           maxLength: 100
         parent_id:
-          type: integer
-          nullable: true
+          type: [integer, "null"]
         icon:
           type: string
         sort_order:
@@ -2314,7 +2336,8 @@ components:
           type: integer
         name:
           type: string
-          example: CI/CD Token
+          examples:
+            - CI/CD Token
         token:
           type: string
           description: Only returned on creation
@@ -2322,13 +2345,11 @@ components:
           type: string
           enum: [read, write, admin]
         last_used_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
         expires_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
         created_at:
           type: string
           format: date-time
@@ -2345,9 +2366,8 @@ components:
           enum: [read, write, admin]
           default: read
         expires_at:
-          type: string
+          type: [string, "null"]
           format: date-time
-          nullable: true
 
     BackupData:
       type: object
@@ -2400,7 +2420,8 @@ components:
       properties:
         key:
           type: string
-          example: backups/snipo-backup-2024-12-01.json
+          examples:
+            - backups/snipo-backup-2024-12-01.json
         size:
           type: integer
         last_modified:
@@ -2430,29 +2451,34 @@ components:
         theme:
           type: string
           enum: [light, dark]
-          example: dark
+          examples:
+            - dark
         editor_theme:
           type: string
           description: Ace editor theme (40+ supported themes)
-          example: tomorrow_night
+          examples:
+            - tomorrow_night
         font_size:
           type: integer
           minimum: 8
           maximum: 32
           description: Editor font size in pixels (0 = default)
-          example: 14
+          examples:
+            - 14
         tab_size:
           type: integer
           minimum: 1
           maximum: 8
           description: Tab size in spaces (0 = default)
-          example: 4
+          examples:
+            - 4
         markdown_font_size:
           type: integer
           minimum: 8
           maximum: 32
           description: Markdown preview font size (0 = default)
-          example: 16
+          examples:
+            - 16
         archive_enabled:
           type: boolean
           description: Whether archive feature is enabled
@@ -2537,6 +2563,13 @@ components:
 
     Unauthorized:
       description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Forbidden - insufficient permissions
       content:
         application/json:
           schema:
