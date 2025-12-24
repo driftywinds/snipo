@@ -1161,13 +1161,13 @@ textarea {
 Ensure your CSS styles the **entire application**, not just the sidebar:
 
 **Areas to verify:**
-- ✅ **Sidebar** - Navigation, folders, tags
-- ✅ **Main Content Area** - Background, overall layout
-- ✅ **Snippets List** - Snippet cards, hover states
-- ✅ **Editor Panel** - Editor background, text, line numbers
-- ✅ **Preview Panel** - Preview background, rendered content
-- ✅ **Header** - Top navigation, buttons
-- ✅ **Modals** - Settings, create/edit dialogs
+- **Sidebar** - Navigation, folders, tags
+- **Main Content Area** - Background, overall layout
+- **Snippets List** - Snippet cards, hover states
+- **Editor Panel** - Editor background, text, line numbers
+- **Preview Panel** - Preview background, rendered content
+- **Header** - Top navigation, buttons
+- **Modals** - Settings, create/edit dialogs
 
 **Test CSS for whole app:**
 ```css
